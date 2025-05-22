@@ -246,10 +246,11 @@ class QAGenerator:
     @staticmethod
     def _strip_json_fence(resp_text: str) -> str:
         """Remove triple-backtick fences, returning raw JSON."""
-        m = re.search(r"```json(.*?)```", resp_text, re.S) \
-        or re.search(r"```(.*?)```", resp_text, re.S)
+        m = re.search(r"```json(.*?)```", resp_text, re.S) or re.search(
+            r"```(.*?)```", resp_text, re.S
+        )
         raw = m.group(1).strip() if m else resp_text
-        raw = re.sub(r',\s*(?=[}\]])', '', raw)
+        raw = re.sub(r",\s*(?=[}\]])", "", raw)
 
         return raw
 

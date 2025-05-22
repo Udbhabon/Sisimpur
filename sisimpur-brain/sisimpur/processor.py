@@ -54,14 +54,24 @@ class DocumentProcessor:
             # Step 3: Choose processing strategy
             if doc_type == "pdf" and language == "bengali" and is_question_paper:
                 # Direct PDF processing for Bengali question papers
-                logger.info("Bengali question paper in PDF format detected - using direct PDF processing")
-                direct_processor = DirectPDFProcessor(language=language, is_question_paper=True)
-                qa_pairs = direct_processor.process(file_path, max_questions=num_questions)
-                logger.info(f"Directly extracted {len(qa_pairs)} questions from PDF question paper")
+                logger.info(
+                    "Bengali question paper in PDF format detected - using direct PDF processing"
+                )
+                direct_processor = DirectPDFProcessor(
+                    language=language, is_question_paper=True
+                )
+                qa_pairs = direct_processor.process(
+                    file_path, max_questions=num_questions
+                )
+                logger.info(
+                    f"Directly extracted {len(qa_pairs)} questions from PDF question paper"
+                )
 
             elif doc_type == "image" and is_question_paper:
                 # Fallback for images misclassified as question papers
-                logger.warning("Detected image marked as question paper: falling back to standard QA generator")
+                logger.warning(
+                    "Detected image marked as question paper: falling back to standard QA generator"
+                )
                 qa_generator = QAGenerator(language=language)
                 if num_questions is None:
                     qa_pairs = qa_generator.generate_optimal(extracted_text)
@@ -72,7 +82,9 @@ class DocumentProcessor:
             else:
                 if is_question_paper:
                     # Specialized processor for genuine question papers
-                    logger.info("Document detected as a question paper, using specialized processor")
+                    logger.info(
+                        "Document detected as a question paper, using specialized processor"
+                    )
                     processor = QuestionPaperProcessor(language=language)
                     qa_pairs = processor.process(
                         extracted_text, max_questions=num_questions

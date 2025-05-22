@@ -9,13 +9,11 @@ from .api_utils import api
 from ..config import DEFAULT_GEMINI_MODEL
 
 # Initialize EasyOCR reader once for English and Bengali
-_EASYOCR_LANGS = ['en', 'bn']
+_EASYOCR_LANGS = ["en", "bn"]
 _easyocr_reader = easyocr.Reader(_EASYOCR_LANGS, gpu=False)
 
-def ocr_with_fallback(
-    img: Image.Image,
-    language_code: str = "eng"
-) -> str:
+
+def ocr_with_fallback(img: Image.Image, language_code: str = "eng") -> str:
     """
     Extract text from an image using EasyOCR.
     If EasyOCR fails or returns empty, fallback to Gemini LLM OCR.
@@ -30,12 +28,7 @@ def ocr_with_fallback(
     Raises:
         RuntimeError if all methods fail
     """
-    lang_map_easyocr = {
-        "eng": "en",
-        "ben": "bn",
-        "bn": "bn",
-        "bengali": "bn"
-    }
+    lang_map_easyocr = {"eng": "en", "ben": "bn", "bn": "bn", "bengali": "bn"}
     easyocr_lang = lang_map_easyocr.get(language_code.lower(), "en")
 
     # Try EasyOCR

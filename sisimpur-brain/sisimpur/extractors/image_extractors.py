@@ -38,10 +38,10 @@ class ImageExtractor(BaseExtractor):
     def _deskew_image(self, img):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 50, 150, apertureSize=3)
-        lines = cv2.HoughLines(edges, 1, np.pi/180, 200)
+        lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
         if lines is not None:
             angles = []
-            for rho, theta in lines[:,0]:
+            for rho, theta in lines[:, 0]:
                 angle = (theta * 180 / np.pi) - 90
                 if -45 < angle < 45:
                     angles.append(angle)
@@ -50,21 +50,28 @@ class ImageExtractor(BaseExtractor):
                 (h, w) = img.shape[:2]
                 center = (w // 2, h // 2)
                 M = cv2.getRotationMatrix2D(center, median_angle, 1.0)
-                img = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+                img = cv2.warpAffine(
+                    img,
+                    M,
+                    (w, h),
+                    flags=cv2.INTER_LINEAR,
+                    borderMode=cv2.BORDER_REPLICATE,
+                )
         return img
 
     def _preprocess_image(self, img):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        binary = cv2.adaptiveThreshold(gray, 255,
-                                       cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                       cv2.THRESH_BINARY_INV,
-                                       15, 10)
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9,9))
+        binary = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 10
+        )
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
         dilated = cv2.dilate(binary, kernel, iterations=2)
         return dilated
 
     def _get_text_blocks(self, binary_img):
-        contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(
+            binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
         boxes = []
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
@@ -101,11 +108,15 @@ class ImageExtractor(BaseExtractor):
         boxes = self._merge_close_boxes(boxes)
 
         results = []
-        mcq_pattern = re.compile(r'^(?:[১২৩৪৫৬৭৮৯০]+\.|\d+\.)\s*')  # Bengali/English question numbers
-        option_pattern = re.compile(r'^(?:[ক-ঘ]|\([ক-ঘ]\)|[a-dA-D]|\([a-dA-D]\))[\.\)]')  # Option markers
+        mcq_pattern = re.compile(
+            r"^(?:[১২৩৪৫৬৭৮৯০]+\.|\d+\.)\s*"
+        )  # Bengali/English question numbers
+        option_pattern = re.compile(
+            r"^(?:[ক-ঘ]|\([ক-ঘ]\)|[a-dA-D]|\([a-dA-D]\))[\.\)]"
+        )  # Option markers
 
-        for (x, y, w, h) in boxes:
-            crop_img = img[y:y+h, x:x+w]
+        for x, y, w, h in boxes:
+            crop_img = img[y : y + h, x : x + w]
             ocr_results = self.reader.readtext(crop_img, detail=1, paragraph=False)
 
             # Filter out low confidence results
@@ -117,7 +128,9 @@ class ImageExtractor(BaseExtractor):
                 # bbox = 4 points, get center y
                 y_center = (bbox[0][1] + bbox[2][1]) / 2
                 line_key = int(y_center // 10)  # group every 10 px approx
-                lines.setdefault(line_key, []).append((bbox[0][0], text))  # sort by x position later
+                lines.setdefault(line_key, []).append(
+                    (bbox[0][0], text)
+                )  # sort by x position later
 
             # Sort lines by vertical position
             sorted_lines = [lines[k] for k in sorted(lines.keys())]
@@ -135,7 +148,7 @@ class ImageExtractor(BaseExtractor):
                 if mcq_pattern.match(line):
                     # New question, add blank line before
                     if formatted_lines:
-                        formatted_lines.append("")  
+                        formatted_lines.append("")
                     formatted_lines.append(line)
                 elif option_pattern.match(line):
                     # Indent options
@@ -172,7 +185,6 @@ class ImageExtractor(BaseExtractor):
         self.save_to_temp(text, None)
         return text
 
-
     def _extract_with_gemini(self, img: Image.Image) -> str:
         """
         Extract text using Gemini for Bengali content.
@@ -187,7 +199,7 @@ class ImageExtractor(BaseExtractor):
         # We'll use a small portion of the image to check
         try:
             # Get a small sample of text to check if it's a question paper
-            sample_text = ocr_with_fallback(img, language_code='ben')
+            sample_text = ocr_with_fallback(img, language_code="ben")
             is_likely_question_paper = self._is_likely_question_paper(sample_text)
         except Exception:
             is_likely_question_paper = False
@@ -223,7 +235,7 @@ class ImageExtractor(BaseExtractor):
             logger.error(f"Error using Gemini for OCR: {e}")
             # Fallback to pytesseract
             logger.info("Falling back to OCR Utils")
-            return ocr_with_fallback(img, language_code='ben')
+            return ocr_with_fallback(img, language_code="ben")
 
     def _is_likely_question_paper(self, text: str) -> bool:
         """

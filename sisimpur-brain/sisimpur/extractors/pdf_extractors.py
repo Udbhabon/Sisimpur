@@ -21,6 +21,7 @@ from ..utils.ocr_utils import ocr_with_fallback
 
 logger = logging.getLogger("sisimpur.extractors.pdf")
 
+
 class TextPDFExtractor(BaseExtractor):
     """Extractor for text-based PDF documents"""
 
@@ -62,6 +63,7 @@ class ImagePDFExtractor(BaseExtractor):
         Args:
             language: Language code for OCR (e.g., 'eng', 'ben')
         """
+
         def __init__(self, language: str = "eng"):
             super().__init__()
             self.language = language
@@ -70,7 +72,7 @@ class ImagePDFExtractor(BaseExtractor):
                 "eng": "en",
             }
             langs = [lang_map.get(language, language)]
-            self.reader = easyocr.Reader(langs, gpu=False) 
+            self.reader = easyocr.Reader(langs, gpu=False)
 
     def extract(self, file_path: str) -> str:
         """
@@ -88,7 +90,9 @@ class ImagePDFExtractor(BaseExtractor):
                 images = convert_from_path(file_path)
                 return self._process_images(images, file_path)
             except Exception as pdf2image_error:
-                logger.warning(f"pdf2image failed (Poppler may not installed): {pdf2image_error}")
+                logger.warning(
+                    f"pdf2image failed (Poppler may not installed): {pdf2image_error}"
+                )
                 logger.info("Falling back to PyMuPDF for image extraction")
                 return self._extract_with_pymupdf(file_path)
         except Exception as e:
@@ -103,7 +107,7 @@ class ImagePDFExtractor(BaseExtractor):
         is_likely_question_paper = False
         if len(images) > 0:
             # Check the first page to see if it's a question paper
-            sample_text = ocr_with_fallback(images[0], language_code='ben+eng')
+            sample_text = ocr_with_fallback(images[0], language_code="ben+eng")
             is_likely_question_paper = self._is_likely_question_paper(sample_text)
             if is_likely_question_paper:
                 logger.info("Detected PDF as likely question paper")
@@ -163,7 +167,7 @@ class ImagePDFExtractor(BaseExtractor):
                 img = Image.open(io.BytesIO(pix.tobytes("png")))
 
                 # Check if it's a question paper
-                sample_text = ocr_with_fallback(img, language_code='ben+eng')
+                sample_text = ocr_with_fallback(img, language_code="ben+eng")
                 is_likely_question_paper = self._is_likely_question_paper(sample_text)
 
                 if is_likely_question_paper:
@@ -206,7 +210,7 @@ class ImagePDFExtractor(BaseExtractor):
         except Exception as e:
             logger.error(f"Error extracting with PyMuPDF: {e}")
             raise
-    
+
     def _preprocess_image(self, img):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
@@ -216,7 +220,9 @@ class ImagePDFExtractor(BaseExtractor):
         return dilated
 
     def _get_text_blocks(self, binary_img):
-        contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(
+            binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
         boxes = []
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
@@ -251,12 +257,12 @@ class ImagePDFExtractor(BaseExtractor):
 
         results = []
         # Bengali/English question numbers
-        mcq_pattern = re.compile(r'^(?:[১২৩৪৫৬৭৮৯০]+\.|\d+\.)\s*')
+        mcq_pattern = re.compile(r"^(?:[১২৩৪৫৬৭৮৯০]+\.|\d+\.)\s*")
         # Option markers
-        option_pattern = re.compile(r'^(?:[ক-ঘ]|\([ক-ঘ]\)|[a-dA-D]|\([a-dA-D]\))[\.\)]')
+        option_pattern = re.compile(r"^(?:[ক-ঘ]|\([ক-ঘ]\)|[a-dA-D]|\([a-dA-D]\))[\.\)]")
 
-        for (x, y, w, h) in boxes:
-            crop_img = img[y:y+h, x:x+w]
+        for x, y, w, h in boxes:
+            crop_img = img[y : y + h, x : x + w]
             ocr_results = self.reader.readtext(crop_img, detail=1, paragraph=False)
 
             # Filter out low confidence results
@@ -313,7 +319,7 @@ class ImagePDFExtractor(BaseExtractor):
         if not is_question_paper:
             try:
                 # Get a small sample of text to check if it's a question paper
-                sample_text = ocr_with_fallback(img, language_code='ben+eng')
+                sample_text = ocr_with_fallback(img, language_code="ben+eng")
                 is_question_paper = self._is_likely_question_paper(sample_text)
             except Exception:
                 is_question_paper = False
@@ -348,7 +354,7 @@ class ImagePDFExtractor(BaseExtractor):
             logger.error(f"Error using Gemini for OCR: {e}")
             # Fallback to pytesseract
             logger.info("Falling back to EasyOCR for OCR")
-            return ocr_with_fallback(img, language_code='ben')
+            return ocr_with_fallback(img, language_code="ben")
 
     def _is_likely_question_paper(self, text: str) -> bool:
         """

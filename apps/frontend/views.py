@@ -117,37 +117,32 @@ def subscribe_to_mailchimp(request):
         return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
     except Exception as e:
         print("Shomossa Ekhane 1")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-    
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
 def submit_form(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         # Extract form data
-        fullname = request.POST.get('name')
-        email = request.POST.get('email')
-        phone = request.POST.get('phone')
+        fullname = request.POST.get("name")
+        email = request.POST.get("email")
+        phone = request.POST.get("phone")
 
         # Prepare API data
-        api_url = 'https://sheetdb.io/api/v1/rc0u9b8squ1ku'
-        payload = {
-            "data": {
-                "fullname": fullname,
-                "email": email,
-                "phone": phone
-            }
-        }
+        api_url = "https://sheetdb.io/api/v1/rc0u9b8squ1ku"
+        payload = {"data": {"fullname": fullname, "email": email, "phone": phone}}
 
         try:
             # Make API request
             response = requests.post(api_url, json=payload)
             response.raise_for_status()
-            return JsonResponse({'message': 'Form Submitted Successfully'})
-        
+            return JsonResponse({"message": "Form Submitted Successfully"})
+
         except SSLError:
-            return JsonResponse({'message': 'SSL Error Occured'}, status=500)
+            return JsonResponse({"message": "SSL Error Occured"}, status=500)
 
         except RequestException as e:
-            return JsonResponse({'error': 'Request failed', 'details': str(e)}, status=500)
+            return JsonResponse(
+                {"error": "Request failed", "details": str(e)}, status=500
+            )
 
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    return JsonResponse({"error": "Invalid request method"}, status=405)

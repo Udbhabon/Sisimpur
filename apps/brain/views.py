@@ -261,8 +261,10 @@ def get_job_status(request, job_id):
         job = get_object_or_404(ProcessingJob, id=job_id, user=request.user)
 
         response_data = {
+            'success': True,
             'job_id': job.id,
             'status': job.status,
+            'progress': job.progress,
             'document_name': job.document_name,
             'created_at': job.created_at.isoformat(),
             'updated_at': job.updated_at.isoformat(),

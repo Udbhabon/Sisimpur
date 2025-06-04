@@ -312,13 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.on("success", function(file, response) {
                 console.log("Dropzone success response:", response);
                 if (response.success) {
-                    // Show success message
-                    showSuccessMessage(`Document processed successfully! Generated ${response.questions_generated} questions.`);
-
-                    // Redirect to results after a short delay
-                    setTimeout(() => {
-                        window.location.href = `{% url "dashboard:quiz_results" 0 %}`.replace('0', response.job_id);
-                    }, 2000);
+                    startProcessingWait(response.job_id);
                 } else {
                     showErrorMessage(response.error || 'Processing failed');
                     resetGenerateButton();
@@ -354,7 +348,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Modern Processing Animation Functions
     let currentStage = 0;
-    let progressInterval;
+    let pollInterval;
+    let jobId = null;
     let currentProgress = 0;
 
     function showProcessingStatus() {
@@ -380,9 +375,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function hideProcessingStatus() {
         processingStatus.style.display = 'none';
-        if (progressInterval) {
-            clearInterval(progressInterval);
-        }
         processingStarted = false;
         currentProgress = 0;
         updateProgressRing(0);
@@ -446,9 +438,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showSuccessMessage(message) {
-        if (progressInterval) {
-            clearInterval(progressInterval);
-        }
         processingStarted = false;
         // Complete all stages
         document.querySelectorAll('.stage').forEach(stage => {
@@ -544,25 +533,53 @@ document.addEventListener('DOMContentLoaded', function() {
         const scaled = Math.min(70, progress * 0.7);
         currentProgress = scaled;
         updateProgressRing(scaled);
-        if (progress >= 100) {
-            startProcessingWait();
-        }
     }
 
-    function startProcessingWait() {
+    function startProcessingWait(id) {
         if (processingStarted) return;
         processingStarted = true;
+        jobId = id;
         setStageCompleted('upload');
         setStageActive('analyze');
         document.getElementById('status-title').textContent = 'Processing Document';
         document.getElementById('status-message').textContent = 'Analyzing and generating questions...';
-        if (progressInterval) clearInterval(progressInterval);
-        progressInterval = setInterval(() => {
-            if (currentProgress < 95) {
-                currentProgress += 0.5;
-                updateProgressRing(currentProgress);
-            }
-        }, 800);
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(pollJobStatus, 3000);
+        window.pollInterval = pollInterval;
+    }
+
+    function pollJobStatus() {
+        if (!jobId) return;
+        fetch(`{% url 'dashboard:api_job_status' 0 %}`.replace('0', jobId))
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                applyServerProgress(data.progress || 0);
+                if (data.status === 'completed') {
+                    clearInterval(pollInterval);
+                    showSuccessMessage(`Document processed successfully! Generated ${data.qa_count || 0} questions.`);
+                    setTimeout(() => {
+                        window.location.href = `{% url 'dashboard:quiz_results' 0 %}`.replace('0', jobId);
+                    }, 2000);
+                } else if (data.status === 'failed') {
+                    clearInterval(pollInterval);
+                    showErrorMessage(data.error_message || 'Processing failed');
+                    resetGenerateButton();
+                }
+            })
+            .catch(err => console.error('Polling error', err));
+    }
+
+    function applyServerProgress(progress) {
+        currentProgress = progress;
+        updateProgressRing(progress);
+        if (progress >= 10) setStageCompleted('upload');
+        if (progress >= 30 && progress < 60) setStageActive('analyze');
+        if (progress >= 60 && progress < 90) {
+            setStageCompleted('analyze');
+            setStageActive('generate');
+        }
+        if (progress >= 90) setStageCompleted('generate');
     }
 
 
@@ -764,8 +781,8 @@ function cancelProcessing() {
         showNotification('Processing cancelled', 'info');
 
         // Clear any ongoing intervals
-        if (window.progressInterval) {
-            clearInterval(window.progressInterval);
+        if (window.pollInterval) {
+            clearInterval(window.pollInterval);
         }
     }
 }

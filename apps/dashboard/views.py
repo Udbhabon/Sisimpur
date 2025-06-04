@@ -5,10 +5,66 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.contrib import messages
+import threading
 import uuid
 import random
 import json
 from .models import ExamSession
+from django.core.files.storage import default_storage
+
+
+def _process_job_async(job_id, saved_path, language, num_questions, question_type):
+    """Background thread to process a document."""
+    from apps.brain.models import ProcessingJob, QuestionAnswer
+    from apps.brain.brain_engine.utils.document_detector import detect_document_type
+    from apps.brain.brain_engine.processor import DocumentProcessor
+    import json as _json
+
+    try:
+        job = ProcessingJob.objects.get(id=job_id)
+        job.status = 'processing'
+        job.progress = 10
+        job.save(update_fields=['status', 'progress'])
+
+        full_file_path = default_storage.path(saved_path)
+
+        metadata = detect_document_type(full_file_path)
+        job.processing_metadata = metadata
+        job.document_type = metadata.get('doc_type', 'unknown')
+        job.is_question_paper = metadata.get('is_question_paper', False)
+        job.progress = 30
+        job.save(update_fields=['processing_metadata', 'document_type', 'is_question_paper', 'progress'])
+
+        processor = DocumentProcessor(language=language)
+        job.progress = 50
+        job.save(update_fields=['progress'])
+
+        output_file = processor.process(full_file_path, num_questions=num_questions)
+        job.progress = 90
+        job.save(update_fields=['progress'])
+
+        with open(output_file, 'r', encoding='utf-8') as f:
+            qa_data = _json.load(f)
+
+        for qa_item in qa_data.get('questions', []):
+            QuestionAnswer.objects.create(
+                job=job,
+                question=qa_item.get('question', ''),
+                answer=qa_item.get('answer', ''),
+                question_type=question_type,
+                options=qa_item.get('options', []),
+                correct_option=qa_item.get('correct_option', ''),
+                confidence_score=qa_item.get('confidence_score'),
+                source_text=qa_item.get('source_text', '')
+            )
+
+        output_filename = f'brain/qa_outputs/{job.id}_results.json'
+        with open(default_storage.path(output_filename), 'w', encoding='utf-8') as f:
+            _json.dump(qa_data, f, ensure_ascii=False, indent=2)
+        job.output_file = output_filename
+        job.mark_completed()
+    except Exception as e:
+        job.mark_failed(str(e))
 
 @login_required(login_url='auth:signupin')
 def home(request):
@@ -244,91 +300,18 @@ def api_process_document(request):
         job.document_file = saved_path
         job.save()
 
-        # Start processing in background (for now, we'll process immediately)
-        try:
-            job.status = 'processing'
-            job.save()
+        # Start processing in a background thread
+        threading.Thread(
+            target=_process_job_async,
+            args=(job.id, saved_path, language, num_questions, question_type),
+            daemon=True
+        ).start()
 
-            # Get full file path for processing
-            full_file_path = default_storage.path(saved_path)
-
-            # Import document detector and detect metadata first
-            from apps.brain.brain_engine.utils.document_detector import detect_document_type
-            document_metadata = detect_document_type(full_file_path)
-
-            # Store detection metadata in job
-            job.processing_metadata = document_metadata
-            job.document_type = document_metadata.get('doc_type', 'unknown')
-            job.is_question_paper = document_metadata.get('is_question_paper', False)
-            job.save()
-
-            # Import and use brain processor
-            from apps.brain.brain_engine.processor import DocumentProcessor
-            processor = DocumentProcessor(language=language)
-
-            # Process document
-            output_file = processor.process(full_file_path, num_questions=num_questions)
-
-            # Load results and save to database
-            import json
-            with open(output_file, 'r', encoding='utf-8') as f:
-                qa_data = json.load(f)
-
-            # Save Q&A pairs to database
-            from apps.brain.models import QuestionAnswer
-            for qa_item in qa_data.get('questions', []):
-                QuestionAnswer.objects.create(
-                    job=job,
-                    question=qa_item.get('question', ''),
-                    answer=qa_item.get('answer', ''),
-                    question_type=question_type,
-                    options=qa_item.get('options', []),
-                    correct_option=qa_item.get('correct_option', ''),
-                    confidence_score=qa_item.get('confidence_score'),
-                    source_text=qa_item.get('source_text', '')
-                )
-
-            # Save output file path
-            output_filename = f'brain/qa_outputs/{job.id}_results.json'
-            with open(default_storage.path(output_filename), 'w', encoding='utf-8') as f:
-                json.dump(qa_data, f, ensure_ascii=False, indent=2)
-            job.output_file = output_filename
-
-            # Mark job as completed
-            job.mark_completed()
-
-            # Prepare form settings and detected values for response
-            form_settings = {
-                'selected_language': language,
-                'selected_question_type': question_type,
-                'selected_num_questions': num_questions,
-            }
-
-            detected_values = {
-                'detected_language': document_metadata.get('language', 'unknown'),
-                'detected_document_type': document_metadata.get('doc_type', 'unknown'),
-                'detected_is_question_paper': document_metadata.get('is_question_paper', False),
-                'detected_pdf_type': document_metadata.get('pdf_type'),
-                'file_size': document_metadata.get('file_size'),
-                'file_extension': document_metadata.get('extension'),
-            }
-
-            return JsonResponse({
-                'success': True,
-                'job_id': job.id,
-                'message': 'Document processed successfully',
-                'questions_generated': len(qa_data.get('questions', [])),
-                'form_settings': form_settings,
-                'detected_values': detected_values,
-            })
-
-        except Exception as processing_error:
-            # Mark job as failed
-            job.mark_failed(str(processing_error))
-            return JsonResponse({
-                'success': False,
-                'error': f'Processing failed: {str(processing_error)}'
-            }, status=500)
+        return JsonResponse({
+            'success': True,
+            'job_id': job.id,
+            'message': 'Processing started'
+        })
 
     except Exception as e:
         return JsonResponse({

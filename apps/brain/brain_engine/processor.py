@@ -129,9 +129,16 @@ class DocumentProcessor:
             
             # Import generators here to avoid circular imports
             from .generators.qa_generator import QAGenerator
-            
+            from .utils.document_detector import detect_language
+
+            # Determine language for QA generation
+            if self.language == "auto":
+                language = detect_language(text)
+            else:
+                language = self.language
+
             # Use standard QA generation for raw text
-            qa_generator = QAGenerator(language=self.language)
+            qa_generator = QAGenerator(language=language)
             if num_questions is None:
                 qa_pairs = qa_generator.generate_optimal(text)
             else:

@@ -16,13 +16,8 @@ class AuthViewTest(TestCase):
         self.assertTrue(callable(signupin))
 
     def test_auth_view_renders_template(self):
-        """Test that the auth view renders the correct template"""
-        # This test will fail until the auth.html template is created and the URL is configured
-        # Uncomment when ready to implement
-        """
-        url = reverse('auth')
+        """Test that the signupin view renders the correct template"""
+        url = reverse("auth:signupin")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'auth.html')
-        """
-        pass
+        self.assertTemplateUsed(response, "signupin.html")

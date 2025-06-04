@@ -1,7 +1,5 @@
-{% extends 'dashboard_base.html' %}
-{% load static %}
-{% block title %} My Quizzes - SISIMPUR {% endblock %}
-{% block content %}
+{% extends 'dashboard_base.html' %} {% load static %} {% block title %} My
+Quizzes - SISIMPUR {% endblock %} {% block content %}
 
 <div class="content-wrapper">
   <div class="content-container">
@@ -24,14 +22,12 @@
             <h3 class="quiz-title">{{ job.document_name }}</h3>
             <span class="quiz-status status-{{ job.status }}">
               {% if job.status == 'pending' %}
-                <i class="ri-time-line"></i> Pending
-              {% elif job.status == 'processing' %}
-                <i class="ri-loader-4-line"></i> Processing
-              {% elif job.status == 'completed' %}
-                <i class="ri-check-line"></i> Completed
-              {% elif job.status == 'failed' %}
-                <i class="ri-error-warning-line"></i> Failed
-              {% endif %}
+              <i class="ri-time-line"></i> Pending {% elif job.status ==
+              'processing' %} <i class="ri-loader-4-line"></i> Processing {%
+              elif job.status == 'completed' %}
+              <i class="ri-check-line"></i> Completed {% elif job.status ==
+              'failed' %} <i class="ri-error-warning-line"></i> Failed {% endif
+              %}
             </span>
           </div>
 
@@ -65,43 +61,62 @@
 
           <div class="quiz-actions">
             {% if job.status == 'completed' %}
-              <a href="{% url 'dashboard:start_exam' job.id %}" class="btn-primary">
-                <i class="ri-play-circle-line"></i>
-                Start Exam
-              </a>
-              {% if job.latest_exam %}
-                <a href="{% url 'dashboard:exam_result' job.latest_exam.session_id %}" class="btn-secondary">
-                  <i class="ri-eye-line"></i>
-                  View Last Result
-                </a>
-              {% endif %}
-              <a href="{% url 'dashboard:start_flashcard' job.id %}" class="btn-secondary">
-                <i class="ri-stack-line"></i>
-                Start Flashcard
-              </a>
-              <a href="{% url 'brain:download_results' job.id %}" class="btn-secondary" download>
-                <i class="ri-download-line"></i>
-                Download JSON
-              </a>
-              <button class="btn-danger" onclick="deleteQuiz({{ job.id }}, '{{ job.document_name|escapejs }}')">
-                <i class="ri-delete-bin-line"></i>
-                Delete
-              </button>
+            <a
+              href="{% url 'dashboard:start_exam' job.id %}"
+              class="btn-primary"
+            >
+              <i class="ri-play-circle-line"></i>
+              Start Exam
+            </a>
+            {% if job.latest_exam %}
+            <a
+              href="{% url 'dashboard:exam_result' job.latest_exam.session_id %}"
+              class="btn-secondary"
+            >
+              <i class="ri-eye-line"></i>
+              View Last Result
+            </a>
+            {% endif %}
+            <a
+              href="{% url 'dashboard:start_flashcard' job.id %}"
+              class="btn-secondary"
+            >
+              <i class="ri-stack-line"></i>
+              Start Flashcard
+            </a>
+            <a
+              href="{% url 'brain:download_results' job.id %}"
+              class="btn-secondary"
+              download
+            >
+              <i class="ri-download-line"></i>
+              Download JSON
+            </a>
+            <button
+              class="btn-danger"
+              onclick="deleteQuiz({{ job.id }}, '{{ job.document_name|escapejs }}')"
+            >
+              <i class="ri-delete-bin-line"></i>
+              Delete
+            </button>
             {% elif job.status == 'processing' %}
-              <button class="btn-secondary" disabled>
-                <i class="ri-loader-4-line"></i>
-                Processing...
-              </button>
+            <button class="btn-secondary" disabled>
+              <i class="ri-loader-4-line"></i>
+              Processing...
+            </button>
             {% elif job.status == 'failed' %}
-              <button class="btn-danger" onclick="deleteQuiz({{ job.id }}, '{{ job.document_name|escapejs }}')">
-                <i class="ri-delete-bin-line"></i>
-                Delete
-              </button>
+            <button
+              class="btn-danger"
+              onclick="deleteQuiz({{ job.id }}, '{{ job.document_name|escapejs }}')"
+            >
+              <i class="ri-delete-bin-line"></i>
+              Delete
+            </button>
             {% else %}
-              <button class="btn-secondary" disabled>
-                <i class="ri-time-line"></i>
-                Pending
-              </button>
+            <button class="btn-secondary" disabled>
+              <i class="ri-time-line"></i>
+              Pending
+            </button>
             {% endif %}
           </div>
         </div>
@@ -113,9 +128,7 @@
       <div class="pagination">
         <!-- Add pagination controls here if needed -->
       </div>
-      {% endif %}
-
-      {% else %}
+      {% endif %} {% else %}
       <div class="empty-state">
         <div class="empty-icon">
           <i class="ri-file-list-line"></i>
@@ -133,63 +146,69 @@
 </div>
 
 <script>
-function deleteQuiz(jobId, documentName) {
-    if (confirm(`Are you sure you want to delete "${documentName}"? This action cannot be undone.`)) {
-        // Show loading state
-        const deleteBtn = event.target.closest('button');
-        const originalContent = deleteBtn.innerHTML;
-        deleteBtn.innerHTML = '<i class="ri-loader-4-line"></i>';
-        deleteBtn.disabled = true;
+  function deleteQuiz(jobId, documentName) {
+    if (
+      confirm(
+        `Are you sure you want to delete "${documentName}"? This action cannot be undone.`,
+      )
+    ) {
+      // Show loading state
+      const deleteBtn = event.target.closest("button");
+      const originalContent = deleteBtn.innerHTML;
+      deleteBtn.innerHTML = '<i class="ri-loader-4-line"></i>';
+      deleteBtn.disabled = true;
 
-        // Send delete request
-        fetch(`/api/brain/jobs/${jobId}/delete/`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/json'
-            }
+      // Send delete request
+      fetch(`/api/brain/jobs/${jobId}/delete/`, {
+        method: "DELETE",
+        headers: {
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) => {
+          if (response.ok) {
+            // Remove the quiz card from the DOM
+            const quizCard = deleteBtn.closest(".quiz-card");
+            quizCard.style.transition =
+              "opacity 0.3s ease, transform 0.3s ease";
+            quizCard.style.opacity = "0";
+            quizCard.style.transform = "scale(0.95)";
+            setTimeout(() => {
+              quizCard.remove();
+
+              // Check if no quizzes left
+              const quizzesGrid = document.querySelector(".quizzes-grid");
+              if (quizzesGrid && quizzesGrid.children.length === 0) {
+                location.reload(); // Reload to show empty state
+              }
+            }, 300);
+
+            // Show success notification
+            showNotification("Quiz deleted successfully", "success");
+          } else {
+            throw new Error("Failed to delete quiz");
+          }
         })
-        .then(response => {
-            if (response.ok) {
-                // Remove the quiz card from the DOM
-                const quizCard = deleteBtn.closest('.quiz-card');
-                quizCard.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                quizCard.style.opacity = '0';
-                quizCard.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    quizCard.remove();
-
-                    // Check if no quizzes left
-                    const quizzesGrid = document.querySelector('.quizzes-grid');
-                    if (quizzesGrid && quizzesGrid.children.length === 0) {
-                        location.reload(); // Reload to show empty state
-                    }
-                }, 300);
-
-                // Show success notification
-                showNotification('Quiz deleted successfully', 'success');
-            } else {
-                throw new Error('Failed to delete quiz');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            // Restore button state
-            deleteBtn.innerHTML = originalContent;
-            deleteBtn.disabled = false;
-            showNotification('Failed to delete quiz. Please try again.', 'error');
+        .catch((error) => {
+          console.error("Error:", error);
+          // Restore button state
+          deleteBtn.innerHTML = originalContent;
+          deleteBtn.disabled = false;
+          showNotification("Failed to delete quiz. Please try again.", "error");
         });
     }
-}
+  }
 
-// Function to show notifications
-function showNotification(message, type = 'info') {
+  // Function to show notifications
+  function showNotification(message, type = "info") {
     // Create notification element
-    const notification = document.createElement('div');
+    const notification = document.createElement("div");
     notification.className = `notification notification-${type}`;
     notification.innerHTML = `
         <div class="notification-content">
-            <i class="ri-${type === 'success' ? 'check' : 'error-warning'}-line"></i>
+            <i class="ri-${type === "success" ? "check" : "error-warning"}-line"></i>
             <span>${message}</span>
         </div>
     `;
@@ -199,50 +218,52 @@ function showNotification(message, type = 'info') {
 
     // Show with animation
     setTimeout(() => {
-        notification.classList.add('show');
+      notification.classList.add("show");
     }, 100);
 
     // Remove after 3 seconds
     setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
+      notification.classList.remove("show");
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
     }, 3000);
-}
+  }
 
-// Auto-refresh for processing jobs
-document.addEventListener('DOMContentLoaded', function() {
-    const processingJobs = document.querySelectorAll('.status-processing, .status-pending');
+  // Auto-refresh for processing jobs
+  document.addEventListener("DOMContentLoaded", function () {
+    const processingJobs = document.querySelectorAll(
+      ".status-processing, .status-pending",
+    );
     if (processingJobs.length > 0) {
-        // Refresh page every 10 seconds if there are processing jobs
-        setTimeout(() => {
-            location.reload();
-        }, 10000);
+      // Refresh page every 10 seconds if there are processing jobs
+      setTimeout(() => {
+        location.reload();
+      }, 10000);
     }
-});
+  });
 </script>
 
 <style>
-/* Quiz Section Styles */
-.quiz-section {
+  /* Quiz Section Styles */
+  .quiz-section {
     padding: 2rem;
     max-width: 1200px;
     margin: 0 auto;
-}
+  }
 
-.page-header {
+  .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
     flex-wrap: wrap;
     gap: 1rem;
-}
+  }
 
-.page-title {
+  .page-title {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -250,15 +271,15 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 2.5rem;
     font-weight: 700;
     margin: 0;
-}
+  }
 
-.page-description {
+  .page-description {
     color: #8892b0;
     font-size: 1.1rem;
     margin-bottom: 2rem;
-}
+  }
 
-.btn-primary {
+  .btn-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     padding: 0.75rem 1.5rem;
@@ -271,16 +292,16 @@ document.addEventListener('DOMContentLoaded', function() {
     transition: all 0.3s ease;
     border: none;
     cursor: pointer;
-}
+  }
 
-.btn-primary:hover {
+  .btn-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
     color: white;
     text-decoration: none;
-}
+  }
 
-.btn-secondary {
+  .btn-secondary {
     background: rgba(255, 255, 255, 0.1);
     color: #e6f1ff;
     padding: 0.5rem 1rem;
@@ -293,16 +314,16 @@ document.addEventListener('DOMContentLoaded', function() {
     transition: all 0.3s ease;
     border: 1px solid rgba(255, 255, 255, 0.2);
     font-size: 0.9rem;
-}
+  }
 
-.btn-secondary:hover {
+  .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.2);
     transform: translateY(-1px);
     color: #e6f1ff;
     text-decoration: none;
-}
+  }
 
-.btn-danger {
+  .btn-danger {
     background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
     color: white;
     padding: 0.5rem 1rem;
@@ -315,55 +336,55 @@ document.addEventListener('DOMContentLoaded', function() {
     transition: all 0.3s ease;
     cursor: pointer;
     font-size: 0.9rem;
-}
+  }
 
-.btn-danger:hover {
+  .btn-danger:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
-}
+  }
 
-/* Quiz Grid */
-.quizzes-grid {
+  /* Quiz Grid */
+  .quizzes-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 1.5rem;
     margin-top: 2rem;
-}
+  }
 
-/* Quiz Card */
-.quiz-card {
+  /* Quiz Card */
+  .quiz-card {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 1.5rem;
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
-}
+  }
 
-.quiz-card:hover {
+  .quiz-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     border-color: rgba(102, 126, 234, 0.3);
-}
+  }
 
-.quiz-header {
+  .quiz-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 1rem;
     gap: 1rem;
-}
+  }
 
-.quiz-title {
+  .quiz-title {
     color: #e6f1ff;
     font-size: 1.2rem;
     font-weight: 600;
     margin: 0;
     line-height: 1.3;
     word-break: break-word;
-}
+  }
 
-.quiz-status {
+  .quiz-status {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -372,53 +393,53 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.8rem;
     font-weight: 500;
     white-space: nowrap;
-}
+  }
 
-.status-completed {
+  .status-completed {
     background: rgba(40, 167, 69, 0.2);
     color: #28a745;
     border: 1px solid rgba(40, 167, 69, 0.3);
-}
+  }
 
-.status-processing {
+  .status-processing {
     background: rgba(255, 193, 7, 0.2);
     color: #ffc107;
     border: 1px solid rgba(255, 193, 7, 0.3);
-}
+  }
 
-.status-pending {
+  .status-pending {
     background: rgba(108, 117, 125, 0.2);
     color: #6c757d;
     border: 1px solid rgba(108, 117, 125, 0.3);
-}
+  }
 
-.status-failed {
+  .status-failed {
     background: rgba(220, 53, 69, 0.2);
     color: #dc3545;
     border: 1px solid rgba(220, 53, 69, 0.3);
-}
+  }
 
-.quiz-meta {
+  .quiz-meta {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     margin-bottom: 1.5rem;
-}
+  }
 
-.meta-item {
+  .meta-item {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     color: #8892b0;
     font-size: 0.9rem;
-}
+  }
 
-.meta-item i {
+  .meta-item i {
     color: #667eea;
     width: 16px;
-}
+  }
 
-.error-message {
+  .error-message {
     background: rgba(220, 53, 69, 0.1);
     border: 1px solid rgba(220, 53, 69, 0.3);
     border-radius: 6px;
@@ -429,58 +450,58 @@ document.addEventListener('DOMContentLoaded', function() {
     gap: 0.5rem;
     color: #dc3545;
     font-size: 0.9rem;
-}
+  }
 
-.quiz-actions {
+  .quiz-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
-}
+  }
 
-.attempts-info {
+  .attempts-info {
     width: 100%;
     margin-top: 0.5rem;
-}
+  }
 
-.attempts-info small {
+  .attempts-info small {
     color: #8892b0;
     font-size: 0.8rem;
     display: flex;
     align-items: center;
     gap: 0.25rem;
-}
+  }
 
-.attempts-info i {
+  .attempts-info i {
     color: #ffc107;
-}
+  }
 
-/* Empty State */
-.empty-state {
+  /* Empty State */
+  .empty-state {
     text-align: center;
     padding: 4rem 2rem;
     color: #8892b0;
-}
+  }
 
-.empty-icon {
+  .empty-icon {
     font-size: 4rem;
     color: #667eea;
     margin-bottom: 1rem;
-}
+  }
 
-.empty-state h3 {
+  .empty-state h3 {
     color: #e6f1ff;
     font-size: 1.5rem;
     margin-bottom: 0.5rem;
-}
+  }
 
-.empty-state p {
+  .empty-state p {
     font-size: 1.1rem;
     margin-bottom: 2rem;
-}
+  }
 
-/* Notification Styles */
-.notification {
+  /* Notification Styles */
+  .notification {
     position: fixed;
     top: 20px;
     right: 20px;
@@ -493,64 +514,64 @@ document.addEventListener('DOMContentLoaded', function() {
     transition: transform 0.3s ease;
     border-left: 4px solid #007bff;
     backdrop-filter: blur(10px);
-}
+  }
 
-.notification.show {
+  .notification.show {
     transform: translateX(0);
-}
+  }
 
-.notification.notification-success {
+  .notification.notification-success {
     border-left-color: #28a745;
-}
+  }
 
-.notification.notification-error {
+  .notification.notification-error {
     border-left-color: #dc3545;
-}
+  }
 
-.notification-content {
+  .notification-content {
     display: flex;
     align-items: center;
     gap: 10px;
     color: #333;
-}
+  }
 
-.notification-content i {
+  .notification-content i {
     font-size: 1.2em;
-}
+  }
 
-.notification-success .notification-content i {
+  .notification-success .notification-content i {
     color: #28a745;
-}
+  }
 
-.notification-error .notification-content i {
+  .notification-error .notification-content i {
     color: #dc3545;
-}
+  }
 
-/* Responsive Design */
-@media (max-width: 768px) {
+  /* Responsive Design */
+  @media (max-width: 768px) {
     .quiz-section {
-        padding: 1rem;
+      padding: 1rem;
     }
 
     .page-header {
-        flex-direction: column;
-        align-items: stretch;
+      flex-direction: column;
+      align-items: stretch;
     }
 
     .page-title {
-        font-size: 2rem;
-        text-align: center;
+      font-size: 2rem;
+      text-align: center;
     }
 
     .quizzes-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+      grid-template-columns: 1fr;
+      gap: 1rem;
     }
 
     .quiz-actions {
-        justify-content: center;
+      justify-content: center;
     }
-}
+  }
 </style>
 
 {% endblock %}

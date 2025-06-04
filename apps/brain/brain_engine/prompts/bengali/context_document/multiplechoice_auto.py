@@ -10,7 +10,7 @@ METADATA = {
     "count_mode": "auto",
     "description": "স্বয়ংক্রিয় বহুনির্বাচনী প্রশ্ন বাংলা প্রসঙ্গ নথির জন্য",
     "difficulty_levels": ["সহজ", "মাঝারি", "কঠিন"],
-    "default_options": 4
+    "default_options": 4,
 }
 
 # The prompt template

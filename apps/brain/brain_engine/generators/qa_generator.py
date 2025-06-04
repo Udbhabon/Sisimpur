@@ -30,7 +30,9 @@ class QAGenerator:
         self.language = language
         self.document_type = document_type
         self.prompt_manager = PromptManager()
-        logger.info(f"Initialized QAGenerator with language: {language}, document_type: {document_type}")
+        logger.info(
+            f"Initialized QAGenerator with language: {language}, document_type: {document_type}"
+        )
 
     def generate(self, text: str, num_questions: int) -> List[Dict[str, Any]]:
         """
@@ -94,7 +96,7 @@ class QAGenerator:
                 question_count_mode=count_mode,
                 text=text,
                 num_questions=None,  # Let prompt manager calculate
-                answer_options=ANSWER_OPTIONS
+                answer_options=ANSWER_OPTIONS,
             )
 
             # Generate using Gemini
@@ -119,7 +121,7 @@ class QAGenerator:
 
         for word in words:
             if current_size + len(word) > max_chunk_size and current_chunk:
-                chunks.append(' '.join(current_chunk))
+                chunks.append(" ".join(current_chunk))
                 current_chunk = [word]
                 current_size = len(word)
             else:
@@ -127,11 +129,13 @@ class QAGenerator:
                 current_size += len(word) + 1  # +1 for space
 
         if current_chunk:
-            chunks.append(' '.join(current_chunk))
+            chunks.append(" ".join(current_chunk))
 
         return chunks
 
-    def _generate_from_chunk(self, text: str, num_questions: int) -> List[Dict[str, Any]]:
+    def _generate_from_chunk(
+        self, text: str, num_questions: int
+    ) -> List[Dict[str, Any]]:
         """Generate Q&A pairs from a text chunk."""
         try:
             # Determine question type and count mode
@@ -146,7 +150,7 @@ class QAGenerator:
                 question_count_mode=count_mode,
                 text=text,
                 num_questions=num_questions,
-                answer_options=ANSWER_OPTIONS
+                answer_options=ANSWER_OPTIONS,
             )
 
             # Generate using Gemini
@@ -162,27 +166,29 @@ class QAGenerator:
             logger.error(f"Error generating from chunk: {e}")
             return []
 
-    def _parse_response(self, response_text: str, question_type: str) -> List[Dict[str, Any]]:
+    def _parse_response(
+        self, response_text: str, question_type: str
+    ) -> List[Dict[str, Any]]:
         """Parse the AI response and extract Q&A pairs."""
         try:
             # Try to extract JSON from the response
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
             if json_match:
                 json_str = json_match.group()
                 data = json.loads(json_str)
 
-                if 'questions' in data:
+                if "questions" in data:
                     qa_pairs = []
-                    for item in data['questions']:
+                    for item in data["questions"]:
                         qa_pair = {
-                            'question': item.get('question', ''),
-                            'answer': item.get('answer', ''),
-                            'question_type': question_type
+                            "question": item.get("question", ""),
+                            "answer": item.get("answer", ""),
+                            "question_type": question_type,
                         }
 
                         if question_type == "MULTIPLECHOICE":
-                            qa_pair['options'] = item.get('options', [])
-                            qa_pair['correct_option'] = item.get('correct_option', '')
+                            qa_pair["options"] = item.get("options", [])
+                            qa_pair["correct_option"] = item.get("correct_option", "")
 
                         qa_pairs.append(qa_pair)
 
@@ -204,10 +210,10 @@ class QAGenerator:
 
         # Split by question patterns
         question_patterns = [
-            r'\d+\.',  # 1. 2. 3.
-            r'[১২৩৪৫৬৭৮৯০]+\.',  # Bengali numbers
-            r'Question \d+:',
-            r'প্রশ্ন \d+:'
+            r"\d+\.",  # 1. 2. 3.
+            r"[১২৩৪৫৬৭৮৯০]+\.",  # Bengali numbers
+            r"Question \d+:",
+            r"প্রশ্ন \d+:",
         ]
 
         for pattern in question_patterns:
@@ -216,14 +222,14 @@ class QAGenerator:
                 for match in matches[1:]:  # Skip first empty match
                     if match.strip():
                         # Extract question and answer from the match
-                        lines = match.strip().split('\n')
+                        lines = match.strip().split("\n")
                         if lines:
                             question = lines[0].strip()
                             if question:
                                 qa_pair = {
-                                    'question': question,
-                                    'answer': 'Generated answer',  # Simplified
-                                    'question_type': question_type
+                                    "question": question,
+                                    "answer": "Generated answer",  # Simplified
+                                    "question_type": question_type,
                                 }
                                 qa_pairs.append(qa_pair)
                 break

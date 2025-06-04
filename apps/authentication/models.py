@@ -7,25 +7,28 @@ import random
 import string
 import hashlib
 
+
 class EmailOTP(models.Model):
     """Model to store email OTP for verification with security best practices"""
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='email_otps')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_otps")
     email = models.EmailField()
     otp_hash = models.CharField(max_length=128)  # Store hashed OTP, not plain text
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     is_verified = models.BooleanField(default=False)
     attempts = models.PositiveIntegerField(default=0)
-    ip_address = models.GenericIPAddressField(null=True, blank=True)  # Track IP for security
+    ip_address = models.GenericIPAddressField(
+        null=True, blank=True
+    )  # Track IP for security
 
     class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'Email OTP'
-        verbose_name_plural = 'Email OTPs'
+        ordering = ["-created_at"]
+        verbose_name = "Email OTP"
+        verbose_name_plural = "Email OTPs"
         indexes = [
-            models.Index(fields=['email', 'created_at']),
-            models.Index(fields=['user', 'is_verified']),
+            models.Index(fields=["email", "created_at"]),
+            models.Index(fields=["user", "is_verified"]),
         ]
 
     def __str__(self):
@@ -35,17 +38,21 @@ class EmailOTP(models.Model):
     def generate_otp(cls, user, email, ip_address=None):
         """Generate a new secure OTP for user email"""
         # Invalidate any existing OTPs for this user/email
-        cls.objects.filter(user=user, email=email, is_verified=False).update(is_verified=True)
+        cls.objects.filter(user=user, email=email, is_verified=False).update(
+            is_verified=True
+        )
 
         # Generate OTP code
-        otp_length = settings.OTP_CONFIG.get('OTP_LENGTH', 6)
-        otp_code = ''.join(random.choices(string.digits, k=otp_length))
+        otp_length = settings.OTP_CONFIG.get("OTP_LENGTH", 6)
+        otp_code = "".join(random.choices(string.digits, k=otp_length))
 
         # Hash the OTP for secure storage
         otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
 
         # Calculate expiry time (shorter for security)
-        expiry_minutes = settings.OTP_CONFIG.get('OTP_EXPIRY_MINUTES', 5)  # Reduced to 5 minutes
+        expiry_minutes = settings.OTP_CONFIG.get(
+            "OTP_EXPIRY_MINUTES", 5
+        )  # Reduced to 5 minutes
         expires_at = timezone.now() + timezone.timedelta(minutes=expiry_minutes)
 
         # Create new OTP
@@ -54,7 +61,7 @@ class EmailOTP(models.Model):
             email=email,
             otp_hash=otp_hash,
             expires_at=expires_at,
-            ip_address=ip_address
+            ip_address=ip_address,
         )
 
         # Return both instance and plain OTP (for email sending only)
@@ -67,11 +74,11 @@ class EmailOTP(models.Model):
 
     def is_valid(self):
         """Check if OTP is valid (not expired, not verified, not exceeded attempts)"""
-        max_attempts = settings.OTP_CONFIG.get('MAX_OTP_ATTEMPTS', 3)
+        max_attempts = settings.OTP_CONFIG.get("MAX_OTP_ATTEMPTS", 3)
         return (
-            not self.is_expired() and
-            not self.is_verified and
-            self.attempts < max_attempts
+            not self.is_expired()
+            and not self.is_verified
+            and self.attempts < max_attempts
         )
 
     def verify(self, entered_otp):
@@ -95,10 +102,9 @@ class EmailOTP(models.Model):
     @classmethod
     def cleanup_expired(cls):
         """Clean up expired OTPs (call this periodically)"""
-        expired_count = cls.objects.filter(
-            expires_at__lt=timezone.now()
-        ).delete()[0]
+        expired_count = cls.objects.filter(expires_at__lt=timezone.now()).delete()[0]
         return expired_count
+
 
 class OTPRateLimit(models.Model):
     """Model to track OTP request rate limiting"""
@@ -112,12 +118,12 @@ class OTPRateLimit(models.Model):
     blocked_until = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = ['email', 'ip_address']
-        verbose_name = 'OTP Rate Limit'
-        verbose_name_plural = 'OTP Rate Limits'
+        unique_together = ["email", "ip_address"]
+        verbose_name = "OTP Rate Limit"
+        verbose_name_plural = "OTP Rate Limits"
         indexes = [
-            models.Index(fields=['email', 'ip_address']),
-            models.Index(fields=['blocked_until']),
+            models.Index(fields=["email", "ip_address"]),
+            models.Index(fields=["blocked_until"]),
         ]
 
     def __str__(self):
@@ -131,17 +137,26 @@ class OTPRateLimit(models.Model):
 
         # Get or create rate limit record
         rate_limit, created = cls.objects.get_or_create(
-            email=email,
-            ip_address=ip_address,
-            defaults={'attempts': 0}
+            email=email, ip_address=ip_address, defaults={"attempts": 0}
         )
 
         # Check if currently blocked
-        if rate_limit.is_blocked and rate_limit.blocked_until and now < rate_limit.blocked_until:
-            return False, f"Too many attempts. Try again after {rate_limit.blocked_until.strftime('%H:%M')}"
+        if (
+            rate_limit.is_blocked
+            and rate_limit.blocked_until
+            and now < rate_limit.blocked_until
+        ):
+            return (
+                False,
+                f"Too many attempts. Try again after {rate_limit.blocked_until.strftime('%H:%M')}",
+            )
 
         # Reset if block period expired
-        if rate_limit.is_blocked and rate_limit.blocked_until and now >= rate_limit.blocked_until:
+        if (
+            rate_limit.is_blocked
+            and rate_limit.blocked_until
+            and now >= rate_limit.blocked_until
+        ):
             rate_limit.is_blocked = False
             rate_limit.blocked_until = None
             rate_limit.attempts = 0
@@ -153,7 +168,7 @@ class OTPRateLimit(models.Model):
             rate_limit.first_attempt = now
 
         # Check rate limit (5 attempts per hour)
-        max_attempts = settings.OTP_CONFIG.get('MAX_HOURLY_ATTEMPTS', 5)
+        max_attempts = settings.OTP_CONFIG.get("MAX_HOURLY_ATTEMPTS", 5)
         if rate_limit.attempts >= max_attempts:
             # Block for 1 hour
             rate_limit.is_blocked = True
@@ -173,7 +188,6 @@ class OTPRateLimit(models.Model):
         """Clean up old rate limit records"""
         week_ago = timezone.now() - timezone.timedelta(days=7)
         deleted_count = cls.objects.filter(
-            last_attempt__lt=week_ago,
-            is_blocked=False
+            last_attempt__lt=week_ago, is_blocked=False
         ).delete()[0]
         return deleted_count

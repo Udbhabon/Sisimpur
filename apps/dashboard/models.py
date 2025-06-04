@@ -9,26 +9,36 @@ class ExamSession(models.Model):
     """Model to track exam sessions and attempts"""
 
     STATUS_CHOICES = [
-        ('active', 'Active'),
-        ('completed', 'Completed'),
-        ('expired', 'Expired'),
-        ('abandoned', 'Abandoned'),
+        ("active", "Active"),
+        ("completed", "Completed"),
+        ("expired", "Expired"),
+        ("abandoned", "Abandoned"),
     ]
 
     # Basic fields
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exam_sessions')
-    processing_job = models.ForeignKey(ProcessingJob, on_delete=models.CASCADE, related_name='exam_sessions')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="exam_sessions"
+    )
+    processing_job = models.ForeignKey(
+        ProcessingJob, on_delete=models.CASCADE, related_name="exam_sessions"
+    )
     session_id = models.CharField(max_length=100, unique=True)
 
     # Session configuration
     total_questions = models.PositiveIntegerField()
-    time_limit_minutes = models.PositiveIntegerField(default=60)  # 1 minute per question default
-    allow_navigation = models.BooleanField(default=True)  # Configurable: allow going back to previous questions
-    max_attempts = models.PositiveIntegerField(default=3)  # Configurable: maximum retry attempts
+    time_limit_minutes = models.PositiveIntegerField(
+        default=60
+    )  # 1 minute per question default
+    allow_navigation = models.BooleanField(
+        default=True
+    )  # Configurable: allow going back to previous questions
+    max_attempts = models.PositiveIntegerField(
+        default=3
+    )  # Configurable: maximum retry attempts
     attempt_number = models.PositiveIntegerField(default=1)
 
     # Session state
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
     current_question_index = models.PositiveIntegerField(default=0)
     questions_order = models.JSONField(default=list)  # Store randomized question order
 
@@ -47,8 +57,8 @@ class ExamSession(models.Model):
     session_metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ['-started_at']
-        unique_together = ['user', 'processing_job', 'attempt_number']
+        ordering = ["-started_at"]
+        unique_together = ["user", "processing_job", "attempt_number"]
 
     def __str__(self):
         return f"{self.user.username} - {self.processing_job.document_name} (Attempt {self.attempt_number})"
@@ -61,7 +71,7 @@ class ExamSession(models.Model):
 
     def get_remaining_time_seconds(self):
         """Get remaining time in seconds"""
-        if self.status != 'active':
+        if self.status != "active":
             return 0
 
         elapsed = self.get_time_elapsed_seconds()
@@ -76,8 +86,7 @@ class ExamSession(models.Model):
     def can_retry(self):
         """Check if user can retry this exam"""
         user_attempts = ExamSession.objects.filter(
-            user=self.user,
-            processing_job=self.processing_job
+            user=self.user, processing_job=self.processing_job
         ).count()
         return user_attempts < self.max_attempts
 
@@ -99,7 +108,11 @@ class ExamSession(models.Model):
             base_points = correct_answers * 10
 
             # Time bonus calculation
-            time_efficiency = min(1.0, (self.time_limit_minutes * 60) / max(1, self.get_time_elapsed_seconds()))
+            time_efficiency = min(
+                1.0,
+                (self.time_limit_minutes * 60)
+                / max(1, self.get_time_elapsed_seconds()),
+            )
             time_bonus = int(correct_answers * 5 * time_efficiency)
 
             self.credit_points = base_points + time_bonus
@@ -110,7 +123,9 @@ class ExamSession(models.Model):
 class ExamAnswer(models.Model):
     """Model to store individual exam answers"""
 
-    exam_session = models.ForeignKey(ExamSession, on_delete=models.CASCADE, related_name='exam_answers')
+    exam_session = models.ForeignKey(
+        ExamSession, on_delete=models.CASCADE, related_name="exam_answers"
+    )
     question = models.ForeignKey(QuestionAnswer, on_delete=models.CASCADE)
     question_index = models.PositiveIntegerField()  # Order in the exam
 
@@ -127,8 +142,8 @@ class ExamAnswer(models.Model):
     answer_metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        unique_together = ['exam_session', 'question']
-        ordering = ['question_index']
+        unique_together = ["exam_session", "question"]
+        ordering = ["question_index"]
 
     def __str__(self):
         return f"{self.exam_session.user.username} - Q{self.question_index + 1}"
@@ -138,14 +153,18 @@ class FlashcardSession(models.Model):
     """Model to track flashcard study sessions"""
 
     STATUS_CHOICES = [
-        ('active', 'Active'),
-        ('completed', 'Completed'),
-        ('abandoned', 'Abandoned'),
+        ("active", "Active"),
+        ("completed", "Completed"),
+        ("abandoned", "Abandoned"),
     ]
 
     # Basic fields
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='flashcard_sessions')
-    processing_job = models.ForeignKey(ProcessingJob, on_delete=models.CASCADE, related_name='flashcard_sessions')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="flashcard_sessions"
+    )
+    processing_job = models.ForeignKey(
+        ProcessingJob, on_delete=models.CASCADE, related_name="flashcard_sessions"
+    )
     session_id = models.CharField(max_length=100, unique=True)
 
     # Session configuration
@@ -154,7 +173,7 @@ class FlashcardSession(models.Model):
     auto_advance = models.BooleanField(default=True)  # Auto advance after timer
 
     # Session state
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
     current_card_index = models.PositiveIntegerField(default=0)
     cards_order = models.JSONField(default=list)  # Store randomized card order
 
@@ -170,10 +189,12 @@ class FlashcardSession(models.Model):
     session_metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ['-started_at']
+        ordering = ["-started_at"]
 
     def __str__(self):
-        return f"{self.user.username} - {self.processing_job.document_name} (Flashcards)"
+        return (
+            f"{self.user.username} - {self.processing_job.document_name} (Flashcards)"
+        )
 
     def get_progress_percentage(self):
         """Get study progress as percentage"""
@@ -185,7 +206,9 @@ class FlashcardSession(models.Model):
 class FlashcardProgress(models.Model):
     """Model to track individual flashcard progress"""
 
-    flashcard_session = models.ForeignKey(FlashcardSession, on_delete=models.CASCADE, related_name='card_progress')
+    flashcard_session = models.ForeignKey(
+        FlashcardSession, on_delete=models.CASCADE, related_name="card_progress"
+    )
     question = models.ForeignKey(QuestionAnswer, on_delete=models.CASCADE)
     card_index = models.PositiveIntegerField()  # Order in the session
 
@@ -198,8 +221,8 @@ class FlashcardProgress(models.Model):
     progress_metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        unique_together = ['flashcard_session', 'question']
-        ordering = ['card_index']
+        unique_together = ["flashcard_session", "question"]
+        ordering = ["card_index"]
 
     def __str__(self):
         return f"{self.flashcard_session.user.username} - Card {self.card_index + 1}"
@@ -235,8 +258,8 @@ class ExamConfiguration(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Exam Configuration'
-        verbose_name_plural = 'Exam Configurations'
+        verbose_name = "Exam Configuration"
+        verbose_name_plural = "Exam Configurations"
 
     def __str__(self):
         return f"Exam Config (Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')})"

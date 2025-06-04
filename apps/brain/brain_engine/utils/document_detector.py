@@ -45,7 +45,9 @@ def get_ocr_reader():
     global reader
     if reader is None:
         if easyocr is None:
-            raise ImportError("EasyOCR is not installed. Please install it with: pip install easyocr")
+            raise ImportError(
+                "EasyOCR is not installed. Please install it with: pip install easyocr"
+            )
         reader = easyocr.Reader(OCR_LANGUAGES, gpu=False)
     return reader
 
@@ -168,7 +170,9 @@ def detect_document_type(file_path: str) -> Dict[str, Any]:
     try:
         if file_ext == ".pdf":
             if fitz is None:
-                raise ImportError("PyMuPDF is not installed. Please install it with: pip install PyMuPDF")
+                raise ImportError(
+                    "PyMuPDF is not installed. Please install it with: pip install PyMuPDF"
+                )
             metadata["doc_type"] = "pdf"
             doc = fitz.open(file_path)
 

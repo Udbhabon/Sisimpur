@@ -10,7 +10,7 @@ METADATA = {
     "count_mode": "specific",
     "description": "Specific count multiple choice questions for English context documents",
     "difficulty_levels": ["easy", "medium", "hard"],
-    "default_options": 4
+    "default_options": 4,
 }
 
 # The prompt template

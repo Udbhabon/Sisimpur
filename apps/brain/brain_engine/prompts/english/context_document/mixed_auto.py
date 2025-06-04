@@ -10,7 +10,7 @@ METADATA = {
     "count_mode": "auto",
     "description": "Auto mixed questions for English context documents",
     "difficulty_levels": ["easy", "medium", "hard"],
-    "question_distribution": "balanced mix of multiple choice and short answer"
+    "question_distribution": "balanced mix of multiple choice and short answer",
 }
 
 # The prompt template

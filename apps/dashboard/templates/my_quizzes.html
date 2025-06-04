@@ -22,12 +22,14 @@ Quizzes - SISIMPUR {% endblock %} {% block content %}
             <h3 class="quiz-title">{{ job.document_name }}</h3>
             <span class="quiz-status status-{{ job.status }}">
               {% if job.status == 'pending' %}
-              <i class="ri-time-line"></i> Pending {% elif job.status ==
-              'processing' %} <i class="ri-loader-4-line"></i> Processing {%
-              elif job.status == 'completed' %}
-              <i class="ri-check-line"></i> Completed {% elif job.status ==
-              'failed' %} <i class="ri-error-warning-line"></i> Failed {% endif
-              %}
+                <i class="ri-time-line"></i> Pending
+              {% elif job.status == 'processing' %}
+                <i class="ri-loader-4-line"></i> Processing
+              {% elif job.status == 'completed' %}
+                <i class="ri-check-line"></i> Completed
+              {% elif job.status == 'failed' %}
+                <i class="ri-error-warning-line"></i> Failed
+              {% endif %}
             </span>
           </div>
 

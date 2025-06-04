@@ -1,7 +1,16 @@
 #!/bin/bash
 
-# Activate the virtual environment
-source venv/bin/activate
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
+# Create and activate a virtual environment if it doesn't exist
+if [ ! -d "venv" ]; then
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -q -r requirements.txt
+else
+    source venv/bin/activate
+fi
 
 # Run all tests with verbose output
 python manage.py test apps/frontend/tests apps/authentication/tests -v 2

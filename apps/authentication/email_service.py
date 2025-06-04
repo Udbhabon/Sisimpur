@@ -10,37 +10,42 @@ from django.utils.html import strip_tags
 
 logger = logging.getLogger(__name__)
 
+
 class EmailService:
     """Service for sending authentication emails"""
-    
+
     @staticmethod
     def send_otp_email(user, email, otp_code):
         """
         Send OTP verification email to user
-        
+
         Args:
             user: User object
             email: Email address to send to
             otp_code: OTP code to send
-            
+
         Returns:
             bool: True if email sent successfully, False otherwise
         """
         try:
             # Log email configuration for debugging
-            logger.info(f"Email configuration - Host: {settings.EMAIL_HOST}, Port: {settings.EMAIL_PORT}")
-            logger.info(f"Email user: {settings.EMAIL_HOST_USER}, From: {settings.DEFAULT_FROM_EMAIL}")
+            logger.info(
+                f"Email configuration - Host: {settings.EMAIL_HOST}, Port: {settings.EMAIL_PORT}"
+            )
+            logger.info(
+                f"Email user: {settings.EMAIL_HOST_USER}, From: {settings.DEFAULT_FROM_EMAIL}"
+            )
 
-            subject = 'Verify Your Email - Sisimpur'
-            
+            subject = "Verify Your Email - Sisimpur"
+
             # Create email context
             context = {
-                'user': user,
-                'otp_code': otp_code,
-                'expiry_minutes': settings.OTP_CONFIG.get('OTP_EXPIRY_MINUTES', 10),
-                'site_name': 'Sisimpur',
+                "user": user,
+                "otp_code": otp_code,
+                "expiry_minutes": settings.OTP_CONFIG.get("OTP_EXPIRY_MINUTES", 10),
+                "site_name": "Sisimpur",
             }
-            
+
             # Create HTML email content
             html_message = f"""
             <!DOCTYPE html>
@@ -150,7 +155,7 @@ class EmailService:
             </body>
             </html>
             """
-            
+
             # Create plain text version
             plain_message = f"""
             Email Verification - Sisimpur
@@ -171,7 +176,7 @@ class EmailService:
             This email was sent to {email}
             © 2025 Sisimpur - AI-Powered Exam Prep
             """
-            
+
             # Send email
             result = send_mail(
                 subject=subject,
@@ -181,33 +186,33 @@ class EmailService:
                 html_message=html_message,
                 fail_silently=False,
             )
-            
+
             if result:
                 logger.info(f"OTP email sent successfully to {email}")
                 return True
             else:
                 logger.error(f"Failed to send OTP email to {email}")
                 return False
-                
+
         except Exception as e:
             logger.error(f"Error sending OTP email to {email}: {str(e)}")
             return False
-    
+
     @staticmethod
     def send_welcome_email(user, email):
         """
         Send welcome email after successful verification
-        
+
         Args:
             user: User object
             email: Email address to send to
-            
+
         Returns:
             bool: True if email sent successfully, False otherwise
         """
         try:
-            subject = 'Welcome to Sisimpur! 🎉'
-            
+            subject = "Welcome to Sisimpur! 🎉"
+
             html_message = f"""
             <!DOCTYPE html>
             <html>
@@ -295,7 +300,7 @@ class EmailService:
             </body>
             </html>
             """
-            
+
             plain_message = f"""
             Welcome to Sisimpur!
             
@@ -314,7 +319,7 @@ class EmailService:
             
             © 2025 Sisimpur - AI-Powered Exam Prep
             """
-            
+
             result = send_mail(
                 subject=subject,
                 message=plain_message,
@@ -323,10 +328,10 @@ class EmailService:
                 html_message=html_message,
                 fail_silently=True,  # Don't fail if welcome email fails
             )
-            
+
             logger.info(f"Welcome email sent to {email}: {result}")
             return result
-            
+
         except Exception as e:
             logger.error(f"Error sending welcome email to {email}: {str(e)}")
             return False

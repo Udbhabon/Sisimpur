@@ -26,7 +26,10 @@ sys.path.insert(0, str(BASE_DIR / "apps"))  # 👈 adds apps/ to Python path
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', "django-insecure-#m17e$1!_ky@zv6bpq_#s^b*caz-sog5pcdi5l44n9y5!39zb#")
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-#m17e$1!_ky@zv6bpq_#s^b*caz-sog5pcdi5l44n9y5!39zb#",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -34,13 +37,13 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 # Google OAuth2 settings
-GOOGLE_OAUTH2_CLIENT_ID = os.getenv('GOOGLE_OAUTH2_CLIENT_ID')
-GOOGLE_OAUTH2_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET')
-GOOGLE_OAUTH2_REDIRECT_URI = 'http://localhost:8000/auth/google-callback/'
+GOOGLE_OAUTH2_CLIENT_ID = os.getenv("GOOGLE_OAUTH2_CLIENT_ID")
+GOOGLE_OAUTH2_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH2_CLIENT_SECRET")
+GOOGLE_OAUTH2_REDIRECT_URI = "http://localhost:8000/auth/google-callback/"
 
 # Allow insecure transport for OAuth in development
 if DEBUG:
-    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 COMING_SOON_TARGET_DATE = "2025-06-25T00:00:00Z"
 
@@ -171,36 +174,32 @@ SITE_ID = 1
 # Sisimpur Brain Configuration
 BRAIN_CONFIG = {
     # API Keys
-    'GEMINI_API_KEY': os.getenv('GOOGLE_API_KEY'),
-
+    "GEMINI_API_KEY": os.getenv("GOOGLE_API_KEY"),
     # Rate limiting settings
-    'MAX_RETRIES': 5,
-    'INITIAL_RETRY_DELAY': 2,  # seconds
-    'MAX_RETRY_DELAY': 60,  # seconds
-    'RATE_LIMIT_BATCH_SIZE': 3,  # Number of chunks to process before cooling down
-    'RATE_LIMIT_COOLDOWN': 10,  # seconds between batches
-
+    "MAX_RETRIES": 5,
+    "INITIAL_RETRY_DELAY": 2,  # seconds
+    "MAX_RETRY_DELAY": 60,  # seconds
+    "RATE_LIMIT_BATCH_SIZE": 3,  # Number of chunks to process before cooling down
+    "RATE_LIMIT_COOLDOWN": 10,  # seconds between batches
     # Model settings
-    'DEFAULT_GEMINI_MODEL': "models/gemini-1.5-flash",
-    'QA_GEMINI_MODEL': "models/gemini-1.5-flash",
-    'FALLBACK_GEMINI_MODEL': "models/gemini-1.5-flash",
-
+    "DEFAULT_GEMINI_MODEL": "models/gemini-1.5-flash",
+    "QA_GEMINI_MODEL": "models/gemini-1.5-flash",
+    "FALLBACK_GEMINI_MODEL": "models/gemini-1.5-flash",
     # Document processing settings
-    'MIN_TEXT_LENGTH': 100,  # Minimum text length to consider a PDF as text-based
-
+    "MIN_TEXT_LENGTH": 100,  # Minimum text length to consider a PDF as text-based
     # Question type settings
-    'QUESTION_TYPE': "MULTIPLECHOICE",  # Options: "SHORT" or "MULTIPLECHOICE"
-    'ANSWER_OPTIONS': 4,  # Number of options for multiple choice questions
+    "QUESTION_TYPE": "MULTIPLECHOICE",  # Options: "SHORT" or "MULTIPLECHOICE"
+    "ANSWER_OPTIONS": 4,  # Number of options for multiple choice questions
 }
 
 # File upload settings
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Brain processing directories
-BRAIN_TEMP_DIR = MEDIA_ROOT / 'brain' / 'temp_extracts'
-BRAIN_OUTPUT_DIR = MEDIA_ROOT / 'brain' / 'qa_outputs'
-BRAIN_UPLOADS_DIR = MEDIA_ROOT / 'brain' / 'uploads'
+BRAIN_TEMP_DIR = MEDIA_ROOT / "brain" / "temp_extracts"
+BRAIN_OUTPUT_DIR = MEDIA_ROOT / "brain" / "qa_outputs"
+BRAIN_UPLOADS_DIR = MEDIA_ROOT / "brain" / "uploads"
 
 # Create necessary directories
 BRAIN_TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -208,21 +207,21 @@ BRAIN_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 BRAIN_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Email Configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 # OTP Configuration - Security Best Practices
 OTP_CONFIG = {
-    'OTP_LENGTH': 6,
-    'OTP_EXPIRY_MINUTES': 5,  # Reduced to 5 minutes for security
-    'MAX_OTP_ATTEMPTS': 3,
-    'RESEND_COOLDOWN_MINUTES': 2,
-    'MAX_HOURLY_ATTEMPTS': 5,  # Rate limiting: 5 OTP requests per hour per email/IP
-    'BLOCK_DURATION_HOURS': 1,  # Block duration after exceeding rate limit
-    'CLEANUP_INTERVAL_HOURS': 24,  # How often to clean up expired records
+    "OTP_LENGTH": 6,
+    "OTP_EXPIRY_MINUTES": 5,  # Reduced to 5 minutes for security
+    "MAX_OTP_ATTEMPTS": 3,
+    "RESEND_COOLDOWN_MINUTES": 2,
+    "MAX_HOURLY_ATTEMPTS": 5,  # Rate limiting: 5 OTP requests per hour per email/IP
+    "BLOCK_DURATION_HOURS": 1,  # Block duration after exceeding rate limit
+    "CLEANUP_INTERVAL_HOURS": 24,  # How often to clean up expired records
 }

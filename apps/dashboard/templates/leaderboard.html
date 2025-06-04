@@ -423,7 +423,8 @@ Leaderboard - SISIMPUR{% endblock %} {% block extra_head %}
         </div>
 
         <div class="leaderboard-list">
-          {% if leaderboard_data %} {% for item in leaderboard_data %}
+          {% if leaderboard_data %}
+          {% for item in leaderboard_data %}
           <div
             class="leaderboard-item {% if item.is_current_user %}current-user{% endif %}"
           >
@@ -465,7 +466,8 @@ Leaderboard - SISIMPUR{% endblock %} {% block extra_head %}
             <div class="avg-score">{{ item.avg_percentage }}%</div>
             <div class="badge {{ item.badge }}">{{ item.badge_label }}</div>
           </div>
-          {% endfor %} {% else %}
+          {% endfor %}
+          {% else %}
           <div class="empty-state">
             <i class="ri-trophy-line"></i>
             <h3>No Rankings Yet</h3>

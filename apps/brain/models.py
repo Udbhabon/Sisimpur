@@ -39,6 +39,9 @@ class ProcessingJob(models.Model):
     )
     document_name = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    progress = models.PositiveIntegerField(
+        default=0, help_text="Processing progress percentage"
+    )
 
     # Processing parameters
     language = models.CharField(max_length=20, choices=LANGUAGE_CHOICES, default="auto")
@@ -84,12 +87,14 @@ class ProcessingJob(models.Model):
     def mark_completed(self):
         """Mark the job as completed"""
         self.status = "completed"
+        self.progress = 100
         self.completed_at = timezone.now()
         self.save()
 
     def mark_failed(self, error_message):
         """Mark the job as failed with error message"""
         self.status = "failed"
+        self.progress = 100
         self.error_message = error_message
         self.completed_at = timezone.now()
         self.save()

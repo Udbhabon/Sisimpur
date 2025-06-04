@@ -385,68 +385,6 @@
           }
       });
 
-          // Handle file removal
-          this.on("removedfile", function (file) {
-            uploadedFile = null;
-            generateBtn.disabled = true;
-            generateBtn.style.opacity = "0.6";
-            hideProcessingStatus();
-          });
-
-          // Handle processing when manually triggered
-          this.on("sending", function (file, xhr, formData) {
-            const csrfToken = document.querySelector(
-              "[name=csrfmiddlewaretoken]",
-            ).value;
-            formData.append("csrfmiddlewaretoken", csrfToken);
-
-            // Add quiz configuration
-            const config = getQuizConfig();
-            Object.keys(config).forEach((key) => {
-              if (config[key]) {
-                formData.append(key, config[key]);
-              }
-            });
-
-            // Show processing status
-            showProcessingStatus();
-          });
-
-          // Handle successful upload
-          this.on("success", function (file, response) {
-            console.log("Dropzone success response:", response);
-            if (response.success) {
-              // Show success message
-              showSuccessMessage(
-                `Document processed successfully! Generated ${response.questions_generated} questions.`,
-              );
-
-              // Redirect to results after a short delay
-              setTimeout(() => {
-                window.location.href =
-                  `{% url "dashboard:quiz_results" 0 %}`.replace(
-                    "0",
-                    response.job_id,
-                  );
-              }, 2000);
-            } else {
-              showErrorMessage(response.error || "Processing failed");
-              resetGenerateButton();
-            }
-          });
-
-          // Handle upload errors
-          this.on("error", function (file, errorMessage, xhr) {
-            console.error("Dropzone error:", errorMessage, xhr);
-            showErrorMessage(
-              typeof errorMessage === "string"
-                ? errorMessage
-                : "Processing failed",
-            );
-            resetGenerateButton();
-          });
-        },
-      });
 
       // Generate button click handler
       generateBtn.addEventListener("click", function () {

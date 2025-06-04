@@ -298,6 +298,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Show processing status
                 showProcessingStatus();
+
+                // Track real upload progress
+                processingStarted = false;
+            });
+
+            // Update progress while uploading
+            this.on("uploadprogress", function(file, progress) {
+                updateUploadProgress(progress);
             });
 
             // Handle successful upload
@@ -362,8 +370,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Start the processing animation
         startProcessingAnimation();
 
-        // Simulate real-time progress with enhanced timing
-        enhancedSimulateProgress();
+        // Set initial stage
+        setStageActive('upload');
+        document.getElementById('status-title').textContent = 'Uploading Document';
+        document.getElementById('status-message').textContent = 'Uploading your file...';
+        document.getElementById('estimated-time').textContent = '';
+        updateProgressRing(0);
     }
 
     function hideProcessingStatus() {
@@ -371,6 +383,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (progressInterval) {
             clearInterval(progressInterval);
         }
+        processingStarted = false;
         currentProgress = 0;
         updateProgressRing(0);
     }
@@ -391,65 +404,6 @@ document.addEventListener('DOMContentLoaded', function() {
         createProcessingParticles();
     }
 
-    function simulateProgress() {
-        const stages = [
-            { name: 'upload', title: 'Uploading Document', message: 'Securely uploading your file...', progress: 25, time: '30 seconds' },
-            { name: 'analyze', title: 'Analyzing Content', message: 'AI is reading and understanding your document...', progress: 50, time: '45 seconds' },
-            { name: 'generate', title: 'Generating Questions', message: 'Creating intelligent questions from your content...', progress: 85, time: '15 seconds' },
-            { name: 'complete', title: 'Almost Done', message: 'Finalizing your quiz...', progress: 100, time: 'Complete!' }
-        ];
-
-        let stageIndex = 0;
-
-        function nextStage() {
-            if (stageIndex < stages.length) {
-                const stage = stages[stageIndex];
-                updateProcessingStage(stage);
-                stageIndex++;
-
-                // Move to next stage after delay
-                setTimeout(nextStage, 2000 + Math.random() * 3000); // 2-5 seconds per stage
-            }
-        }
-
-        nextStage();
-    }
-
-    function updateProcessingStage(stage) {
-        // Update stage indicators
-        const stageElement = document.getElementById(`stage-${stage.name}`);
-        if (stageElement) {
-            // Mark previous stages as completed
-            document.querySelectorAll('.stage').forEach((el, index) => {
-                if (index < currentStage) {
-                    el.classList.add('completed');
-                    el.classList.remove('active');
-                }
-            });
-
-            // Mark current stage as active
-            stageElement.classList.add('active');
-            currentStage++;
-        }
-
-        // Update text content
-        document.getElementById('status-title').textContent = stage.title;
-        document.getElementById('status-message').textContent = stage.message;
-        document.getElementById('estimated-time').textContent = stage.time;
-
-        // Update progress ring
-        animateProgressTo(stage.progress);
-
-        // Update icon based on stage
-        const iconElement = document.getElementById('progress-icon').querySelector('i');
-        const iconMap = {
-            'upload': 'ri-upload-cloud-line',
-            'analyze': 'ri-search-eye-line',
-            'generate': 'ri-magic-line',
-            'complete': 'ri-check-line'
-        };
-        iconElement.className = iconMap[stage.name] || 'ri-file-text-line';
-    }
 
     function animateProgressTo(targetProgress) {
         const progressCircle = document.getElementById('progress-circle');
@@ -492,6 +446,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showSuccessMessage(message) {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+        processingStarted = false;
         // Complete all stages
         document.querySelectorAll('.stage').forEach(stage => {
             stage.classList.add('completed');
@@ -562,58 +520,51 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Enhanced progress tracking with more realistic timing
-    function enhancedSimulateProgress() {
-        const stages = [
-            {
-                name: 'upload',
-                title: 'Uploading Document',
-                message: 'Securely uploading your file...',
-                progress: 15,
-                time: '20-30 seconds',
-                duration: 3000
-            },
-            {
-                name: 'analyze',
-                title: 'Analyzing Content',
-                message: 'AI is reading and understanding your document...',
-                progress: 45,
-                time: '30-60 seconds',
-                duration: 5000
-            },
-            {
-                name: 'generate',
-                title: 'Generating Questions',
-                message: 'Creating intelligent questions from your content...',
-                progress: 85,
-                time: '10-20 seconds',
-                duration: 4000
-            },
-            {
-                name: 'complete',
-                title: 'Finalizing',
-                message: 'Adding finishing touches to your quiz...',
-                progress: 98,
-                time: 'Almost done!',
-                duration: 2000
-            }
-        ];
-
-        let stageIndex = 0;
-
-        function nextStage() {
-            if (stageIndex < stages.length) {
-                const stage = stages[stageIndex];
-                updateProcessingStage(stage);
-                stageIndex++;
-
-                // Use stage-specific duration
-                setTimeout(nextStage, stage.duration);
-            }
+    function setStageActive(name) {
+        document.querySelectorAll('.stage').forEach(stage => {
+            stage.classList.remove('active');
+        });
+        const el = document.getElementById(`stage-${name}`);
+        if (el) {
+            el.classList.add('active');
         }
-
-        nextStage();
     }
+
+    function setStageCompleted(name) {
+        const el = document.getElementById(`stage-${name}`);
+        if (el) {
+            el.classList.remove('active');
+            el.classList.add('completed');
+        }
+    }
+
+    let processingStarted = false;
+
+    function updateUploadProgress(progress) {
+        const scaled = Math.min(70, progress * 0.7);
+        currentProgress = scaled;
+        updateProgressRing(scaled);
+        if (progress >= 100) {
+            startProcessingWait();
+        }
+    }
+
+    function startProcessingWait() {
+        if (processingStarted) return;
+        processingStarted = true;
+        setStageCompleted('upload');
+        setStageActive('analyze');
+        document.getElementById('status-title').textContent = 'Processing Document';
+        document.getElementById('status-message').textContent = 'Analyzing and generating questions...';
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = setInterval(() => {
+            if (currentProgress < 95) {
+                currentProgress += 0.5;
+                updateProgressRing(currentProgress);
+            }
+        }, 800);
+    }
+
 
     function showErrorMessage(message) {
         alert('Error: ' + message);

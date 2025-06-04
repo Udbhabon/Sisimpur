@@ -7,7 +7,7 @@ This module provides the main document processing pipeline.
 import logging
 from typing import Dict, Any, Optional
 
-from .utils.document_detector import detect_document_type
+from .utils.document_detector import detect_document_type, detect_language
 from .utils.file_utils import save_qa_pairs
 from .extractors import TextPDFExtractor, ImagePDFExtractor, ImageExtractor
 from .extractors.base import BaseExtractor
@@ -129,9 +129,15 @@ class DocumentProcessor:
             
             # Import generators here to avoid circular imports
             from .generators.qa_generator import QAGenerator
-            
+
+            # Determine language for QA generation
+            if self.language == "auto":
+                language = detect_language(text)
+            else:
+                language = self.language
+
             # Use standard QA generation for raw text
-            qa_generator = QAGenerator(language=self.language)
+            qa_generator = QAGenerator(language=language)
             if num_questions is None:
                 qa_pairs = qa_generator.generate_optimal(text)
             else:

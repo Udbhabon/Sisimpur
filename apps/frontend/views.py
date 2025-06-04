@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.timezone import datetime
+from django.utils import timezone
 import json
 import os
 from dotenv import load_dotenv
@@ -76,7 +76,7 @@ def submit_and_subscribe(request):
                 })
 
             # Get current time and date
-            current_datetime = datetime.now()
+            current_datetime = timezone.now()
             current_time = current_datetime.strftime("%H:%M:%S")
             current_date = current_datetime.strftime("%Y-%m-%d")
 

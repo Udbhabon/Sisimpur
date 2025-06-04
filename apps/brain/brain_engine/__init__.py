@@ -12,6 +12,6 @@ from .processor import DocumentProcessor
 from .config import BrainConfig
 
 __all__ = [
-    'DocumentProcessor',
-    'BrainConfig',
+    "DocumentProcessor",
+    "BrainConfig",
 ]

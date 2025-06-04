@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.utils.timezone import now
 from datetime import timedelta
 
+
 class ComingSoonMiddleware:
     """
     When COMING_SOON=True, all non-admin URLs render the coming_soon page.
@@ -21,8 +22,11 @@ class ComingSoonMiddleware:
         ):
             # Fixed date – only change it when you plan to update launch
             target_date_iso = settings.COMING_SOON_TARGET_DATE
-            return render(request, "coming_soon/coming_soon.html", {
-                "target_date": target_date_iso
-            }, status=503)
+            return render(
+                request,
+                "coming_soon/coming_soon.html",
+                {"target_date": target_date_iso},
+                status=503,
+            )
 
         return self.get_response(request)

@@ -10,7 +10,7 @@ METADATA = {
     "count_mode": "specific",
     "description": "Specific count short answer questions for English context documents",
     "difficulty_levels": ["easy", "medium", "hard"],
-    "answer_length": "1-3 sentences"
+    "answer_length": "1-3 sentences",
 }
 
 # The prompt template

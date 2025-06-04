@@ -10,7 +10,7 @@ METADATA = {
     "count_mode": "auto",
     "description": "Auto multiple choice questions inspired by English question papers",
     "difficulty_levels": ["easy", "medium", "hard"],
-    "default_options": 4
+    "default_options": 4,
 }
 
 # The prompt template

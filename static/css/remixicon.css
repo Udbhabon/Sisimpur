@@ -3,14 +3,15 @@
 
 @font-face {
   font-family: "remixicon";
-  src: url('data:font/woff2;base64,') format("woff2");
+  src: url("data:font/woff2;base64,") format("woff2");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
-[class^="ri-"], [class*=" ri-"] {
-  font-family: 'remixicon' !important;
+[class^="ri-"],
+[class*=" ri-"] {
+  font-family: "remixicon" !important;
   font-style: normal;
   font-weight: normal;
   font-variant: normal;
@@ -21,35 +22,93 @@
 }
 
 /* Fallback to Unicode symbols when font fails */
-.ri-arrow-left-s-line:before { content: "‹"; }
-.ri-arrow-right-s-line:before { content: "›"; }
-.ri-menu-line:before { content: "☰"; }
-.ri-close-line:before { content: "×"; }
-.ri-search-line:before { content: "🔍"; }
-.ri-notification-line:before { content: "🔔"; }
-.ri-user-line:before { content: "👤"; }
-.ri-settings-line:before { content: "⚙"; }
-.ri-logout-box-line:before { content: "⏻"; }
-.ri-home-line:before { content: "🏠"; }
-.ri-file-text-line:before { content: "📄"; }
-.ri-question-line:before { content: "❓"; }
-.ri-bar-chart-line:before { content: "📊"; }
-.ri-book-line:before { content: "📚"; }
-.ri-upload-cloud-line:before { content: "☁"; }
-.ri-download-line:before { content: "⬇"; }
-.ri-check-line:before { content: "✓"; }
-.ri-error-warning-line:before { content: "⚠"; }
-.ri-information-line:before { content: "ℹ"; }
-.ri-mail-send:before { content: "✉"; }
-.ri-shield-check:before { content: "🛡"; }
-.ri-loader-alt:before { content: "⟳"; }
-.ri-refresh:before { content: "↻"; }
-.ri-time:before { content: "⏰"; }
-.ri-user-plus:before { content: "👤+"; }
-.ri-lock:before { content: "🔒"; }
-.ri-check-circle:before { content: "✅"; }
-.ri-magic-line:before { content: "✨"; }
-.ri-search-eye-line:before { content: "👁"; }
+.ri-arrow-left-s-line:before {
+  content: "‹";
+}
+.ri-arrow-right-s-line:before {
+  content: "›";
+}
+.ri-menu-line:before {
+  content: "☰";
+}
+.ri-close-line:before {
+  content: "×";
+}
+.ri-search-line:before {
+  content: "🔍";
+}
+.ri-notification-line:before {
+  content: "🔔";
+}
+.ri-user-line:before {
+  content: "👤";
+}
+.ri-settings-line:before {
+  content: "⚙";
+}
+.ri-logout-box-line:before {
+  content: "⏻";
+}
+.ri-home-line:before {
+  content: "🏠";
+}
+.ri-file-text-line:before {
+  content: "📄";
+}
+.ri-question-line:before {
+  content: "❓";
+}
+.ri-bar-chart-line:before {
+  content: "📊";
+}
+.ri-book-line:before {
+  content: "📚";
+}
+.ri-upload-cloud-line:before {
+  content: "☁";
+}
+.ri-download-line:before {
+  content: "⬇";
+}
+.ri-check-line:before {
+  content: "✓";
+}
+.ri-error-warning-line:before {
+  content: "⚠";
+}
+.ri-information-line:before {
+  content: "ℹ";
+}
+.ri-mail-send:before {
+  content: "✉";
+}
+.ri-shield-check:before {
+  content: "🛡";
+}
+.ri-loader-alt:before {
+  content: "⟳";
+}
+.ri-refresh:before {
+  content: "↻";
+}
+.ri-time:before {
+  content: "⏰";
+}
+.ri-user-plus:before {
+  content: "👤+";
+}
+.ri-lock:before {
+  content: "🔒";
+}
+.ri-check-circle:before {
+  content: "✅";
+}
+.ri-magic-line:before {
+  content: "✨";
+}
+.ri-search-eye-line:before {
+  content: "👁";
+}
 
 /* Animation for loading spinner */
 .ri-loader-alt {
@@ -57,12 +116,17 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Ensure icons are visible */
-[class^="ri-"], [class*=" ri-"] {
+[class^="ri-"],
+[class*=" ri-"] {
   display: inline-block;
   font-size: inherit;
   text-rendering: auto;

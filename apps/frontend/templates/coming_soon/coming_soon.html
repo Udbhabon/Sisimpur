@@ -349,11 +349,11 @@ SISIMPUR{% endblock %} {% block head %}
           "Content-Type": "application/json",
           "X-CSRFToken": csrfToken,
         },
-        body: JSON.stringify({ 
-            name: name,
-            email: email,
-            phone: phone,
-         }),
+        body: JSON.stringify({
+          name: name,
+          email: email,
+          phone: phone,
+        }),
       })
         .then((response) => response.json())
         .then((data) => {
@@ -430,25 +430,31 @@ SISIMPUR{% endblock %} {% block head %}
     });
   });
   document.getElementById("closeButton").addEventListener("click", function () {
-  const modal = bootstrap.Modal.getInstance(document.getElementById("betaModal"));
-  if (modal) modal.hide();
+    const modal = bootstrap.Modal.getInstance(
+      document.getElementById("betaModal"),
+    );
+    if (modal) modal.hide();
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/party-js@latest/bundle/party.min.js"></script>
 
 <!-- Countdown Timer Script -->
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
+  document.addEventListener("DOMContentLoaded", function () {
     // Parse the countdown date from Django (already in UTC ISO format)
-    var countDownDate = new Date(JSON.parse(document.getElementById("target-date").textContent)).getTime();
+    var countDownDate = new Date(
+      JSON.parse(document.getElementById("target-date").textContent),
+    ).getTime();
 
-    var countdownInterval = setInterval(function() {
+    var countdownInterval = setInterval(function () {
       try {
         var now = new Date().getTime();
         var distance = countDownDate - now;
 
         var days = Math.floor(distance / (1000 * 60 * 60 * 24));
-        var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        var hours = Math.floor(
+          (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+        );
         var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         var seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
@@ -470,7 +476,10 @@ SISIMPUR{% endblock %} {% block head %}
       }
     }, 1000);
   });
-  console.log("Target Date:", document.getElementById("target-date").textContent);
+  console.log(
+    "Target Date:",
+    document.getElementById("target-date").textContent,
+  );
 </script>
 
 {% endblock %}

@@ -22,44 +22,51 @@ def _process_job_async(job_id, saved_path, language, num_questions, question_typ
 
     try:
         job = ProcessingJob.objects.get(id=job_id)
-        job.status = 'processing'
+        job.status = "processing"
         job.progress = 10
-        job.save(update_fields=['status', 'progress'])
+        job.save(update_fields=["status", "progress"])
 
         full_file_path = default_storage.path(saved_path)
 
         metadata = detect_document_type(full_file_path)
         job.processing_metadata = metadata
-        job.document_type = metadata.get('doc_type', 'unknown')
-        job.is_question_paper = metadata.get('is_question_paper', False)
+        job.document_type = metadata.get("doc_type", "unknown")
+        job.is_question_paper = metadata.get("is_question_paper", False)
         job.progress = 30
-        job.save(update_fields=['processing_metadata', 'document_type', 'is_question_paper', 'progress'])
+        job.save(
+            update_fields=[
+                "processing_metadata",
+                "document_type",
+                "is_question_paper",
+                "progress",
+            ]
+        )
 
         processor = DocumentProcessor(language=language)
         job.progress = 50
-        job.save(update_fields=['progress'])
+        job.save(update_fields=["progress"])
 
         output_file = processor.process(full_file_path, num_questions=num_questions)
         job.progress = 90
-        job.save(update_fields=['progress'])
+        job.save(update_fields=["progress"])
 
-        with open(output_file, 'r', encoding='utf-8') as f:
+        with open(output_file, "r", encoding="utf-8") as f:
             qa_data = _json.load(f)
 
-        for qa_item in qa_data.get('questions', []):
+        for qa_item in qa_data.get("questions", []):
             QuestionAnswer.objects.create(
                 job=job,
-                question=qa_item.get('question', ''),
-                answer=qa_item.get('answer', ''),
+                question=qa_item.get("question", ""),
+                answer=qa_item.get("answer", ""),
                 question_type=question_type,
-                options=qa_item.get('options', []),
-                correct_option=qa_item.get('correct_option', ''),
-                confidence_score=qa_item.get('confidence_score'),
-                source_text=qa_item.get('source_text', '')
+                options=qa_item.get("options", []),
+                correct_option=qa_item.get("correct_option", ""),
+                confidence_score=qa_item.get("confidence_score"),
+                source_text=qa_item.get("source_text", ""),
             )
 
-        output_filename = f'brain/qa_outputs/{job.id}_results.json'
-        with open(default_storage.path(output_filename), 'w', encoding='utf-8') as f:
+        output_filename = f"brain/qa_outputs/{job.id}_results.json"
+        with open(default_storage.path(output_filename), "w", encoding="utf-8") as f:
             _json.dump(qa_data, f, ensure_ascii=False, indent=2)
         job.output_file = output_filename
         job.mark_completed()
@@ -331,14 +338,12 @@ def api_process_document(request):
         threading.Thread(
             target=_process_job_async,
             args=(job.id, saved_path, language, num_questions, question_type),
-            daemon=True
+            daemon=True,
         ).start()
 
-        return JsonResponse({
-            'success': True,
-            'job_id': job.id,
-            'message': 'Processing started'
-        })
+        return JsonResponse(
+            {"success": True, "job_id": job.id, "message": "Processing started"}
+        )
 
     except Exception as e:
         return JsonResponse(

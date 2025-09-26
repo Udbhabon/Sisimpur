@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.so
+*.egg-info/
+*.egg
+.env
+!.env.example
+*.venv
+env/
+venv/
+ENV/
+.Python
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+static_root/
+static_cdn/
+static_collected/
+
+# Environment variables
+.env
+
+# VS Code / IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.cache
+pytestdebug.log
+
+# Migrations (optional if you regenerate them)
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# Bootstrap static frontend (basic use)
+*.map
+node_modules/
+
+# Docker (if used)
+*.pid
+*.db
+*.tar
+*.gz
+*.log
+docker-compose.override.yml
+
+# MySQL / PostgreSQL dumps
+*.sql
+*.sqlite3
+
+# Backup files
+*.bak
+*.swp
+*.tmp
+*~
+.env.docker

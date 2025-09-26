@@ -1,0 +1,239 @@
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+import json
+
+
+class ProcessingJob(models.Model):
+    """Model to track document processing jobs"""
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    
+    LANGUAGE_CHOICES = [
+        ('auto', 'Auto Detect'),
+        ('english', 'English'),
+        ('bengali', 'Bengali'),
+        ('bangla', 'Bangla'),
+    ]
+    
+    QUESTION_TYPE_CHOICES = [
+        ('SHORT', 'Short Answer'),
+        ('MULTIPLECHOICE', 'Multiple Choice'),
+    ]
+    
+    DOCUMENT_TYPE_CHOICES = [
+        ('text_pdf', 'Text PDF'),
+        ('image_pdf', 'Image PDF'),
+        ('image', 'Image'),
+        ('text', 'Raw Text'),
+    ]
+    
+    # Basic fields
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='processing_jobs')
+    document_name = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # Processing parameters
+    language = models.CharField(max_length=20, choices=LANGUAGE_CHOICES, default='auto')
+    num_questions = models.PositiveIntegerField(null=True, blank=True, help_text="Number of questions to generate")
+    question_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES, default='MULTIPLECHOICE')
+    
+    # Document information
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPE_CHOICES, null=True, blank=True)
+    is_question_paper = models.BooleanField(default=False)
+    
+    # File fields
+    document_file = models.FileField(upload_to='brain/uploads/', null=True, blank=True)
+    extracted_text_file = models.FileField(upload_to='brain/temp_extracts/', null=True, blank=True)
+    output_file = models.FileField(upload_to='brain/qa_outputs/', null=True, blank=True)
+    
+    # Metadata
+    processing_metadata = models.JSONField(default=dict, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Error handling
+    error_message = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Processing Job'
+        verbose_name_plural = 'Processing Jobs'
+    
+    def __str__(self):
+        return f"{self.document_name} - {self.get_status_display()}"
+    
+    def mark_completed(self):
+        """Mark the job as completed"""
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        self.save()
+    
+    def mark_failed(self, error_message):
+        """Mark the job as failed with error message"""
+        self.status = 'failed'
+        self.error_message = error_message
+        self.completed_at = timezone.now()
+        self.save()
+    
+    def get_qa_pairs(self):
+        """Get all question-answer pairs for this job"""
+        return self.question_answers.all()
+
+
+class QuestionAnswer(models.Model):
+    """Model to store individual question-answer pairs"""
+    
+    QUESTION_TYPE_CHOICES = [
+        ('SHORT', 'Short Answer'),
+        ('MULTIPLECHOICE', 'Multiple Choice'),
+    ]
+    
+    job = models.ForeignKey(ProcessingJob, on_delete=models.CASCADE, related_name='question_answers')
+    question = models.TextField()
+    answer = models.TextField()
+    question_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES)
+    
+    # For multiple choice questions
+    options = models.JSONField(default=list, blank=True, help_text="List of options for multiple choice questions")
+    correct_option = models.CharField(max_length=10, blank=True, help_text="Correct option label (A, B, C, D, etc.)")
+    
+    # Metadata
+    confidence_score = models.FloatField(null=True, blank=True, help_text="AI confidence score for this Q&A pair")
+    source_text = models.TextField(blank=True, help_text="Source text from which this question was generated")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'Question Answer'
+        verbose_name_plural = 'Question Answers'
+    
+    def __str__(self):
+        return f"Q: {self.question[:50]}..."
+    
+    def get_formatted_options(self):
+        """
+        Get options in the new structured format
+        Converts old format ["ক) বায়ু", "খ) জল"] to new format [{"key": "ক", "text": "বায়ু"}]
+        """
+        if not self.options:
+            return []
+
+        formatted_options = []
+        for option in self.options:
+            if isinstance(option, dict) and 'key' in option and 'text' in option:
+                # Already in new format
+                formatted_options.append(option)
+            elif isinstance(option, str):
+                # Old format - convert to new format
+                if ')' in option and len(option) > 2:
+                    key = option.split(')')[0].strip()
+                    text = option.split(')', 1)[1].strip()
+                    formatted_options.append({"key": key, "text": text})
+                else:
+                    # Fallback for malformed options
+                    formatted_options.append({"key": str(len(formatted_options) + 1), "text": option})
+            else:
+                # Fallback for unknown format
+                formatted_options.append({"key": str(len(formatted_options) + 1), "text": str(option)})
+
+        return formatted_options
+
+    def get_correct_key(self):
+        """
+        Resolve the correct option key in a robust way supporting new/old formats.
+        Returns the option key (e.g., 'A', 'ক') or None if unknown.
+        """
+        if not self.options:
+            return None
+
+        formatted_options = self.get_formatted_options()
+        key_set = {str(opt.get("key", "")).strip(): opt for opt in formatted_options}
+        text_to_key = {str(opt.get("text", "")).strip().lower(): str(opt.get("key", "")).strip() for opt in formatted_options}
+
+        # Try stored correct_option as key or text (handles values like 'A)' or 'ক) option')
+        if self.correct_option:
+            co = str(self.correct_option).strip()
+            co_key_candidate = co.split(')')[0].strip() if ')' in co else co
+            if co_key_candidate in key_set:
+                return co_key_candidate
+            # Try as text fragment
+            co_text_norm = co.split(')', 1)[1].strip().lower() if ')' in co else co.lower()
+            if co_text_norm in text_to_key:
+                return text_to_key[co_text_norm]
+
+        # Fallback: use canonical answer text to find matching option
+        if self.answer:
+            ans_norm = str(self.answer).strip().lower()
+            if ans_norm in text_to_key:
+                return text_to_key[ans_norm]
+
+        return None
+
+    def get_correct_display(self):
+        """
+        Return a human-friendly correct answer string like 'A) Option text'.
+        If key not resolved, return the canonical answer text.
+        """
+        key = self.get_correct_key()
+        if key is None:
+            # No key could be resolved, fallback to raw answer text
+            return self.answer
+
+        for opt in self.get_formatted_options():
+            if str(opt.get("key", "")).strip() == str(key).strip():
+                text = str(opt.get("text", "")).strip()
+                return f"{key}) {text}" if text else str(key)
+
+        # As a last resort
+        return self.answer
+
+    def get_legacy_options(self):
+        """
+        Get options in the old string format for backward compatibility
+        Converts new format [{"key": "ক", "text": "বায়ু"}] to old format ["ক) বায়ু"]
+        """
+        if not self.options:
+            return []
+
+        legacy_options = []
+        for option in self.options:
+            if isinstance(option, dict) and 'key' in option and 'text' in option:
+                # New format - convert to old format
+                legacy_options.append(f"{option['key']}) {option['text']}")
+            elif isinstance(option, str):
+                # Already in old format
+                legacy_options.append(option)
+            else:
+                # Fallback
+                legacy_options.append(str(option))
+
+        return legacy_options
+
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        data = {
+            'question': self.question,
+            'answer': self.answer,
+            'question_type': self.question_type,
+        }
+
+        if self.question_type == 'MULTIPLECHOICE' and self.options:
+            data['options'] = self.get_formatted_options()  # Use new format
+            # Include normalized correct key for API consumers if available
+            normalized_key = self.get_correct_key()
+            data['correct_option'] = normalized_key if normalized_key is not None else self.correct_option
+
+        if self.confidence_score is not None:
+            data['confidence_score'] = self.confidence_score
+
+        return data

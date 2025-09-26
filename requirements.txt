@@ -1,0 +1,20 @@
+# API-Based Requirements for SISIMPUR
+# This file contains minimal dependencies for API-based processing
+
+# Core Django and web framework
+Django
+django_browser_reload
+python-dotenv
+
+# Discord webhook integration
+discord-webhook
+
+# HTTP client for API calls
+requests
+
+# File handling and utilities
+PyYAML
+
+# Build and utility tools
+setuptools
+wheel

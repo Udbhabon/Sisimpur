@@ -9,8 +9,9 @@ import uuid
 import random
 from .utils import evaluate_answer
 import json
-from .models import ExamSession
+from .models import ExamSession, ShortAnswerEvaluation, ExamAnswer
 from apps.utils import send_document_processing_success_webhook, send_document_processing_failed_webhook, send_exam_completion_webhook
+from apps.brain.api_service import APIService
 
 @login_required(login_url='auth:signupin')
 def home(request):
@@ -68,7 +69,7 @@ def my_quizzes(request):
     """
     try:
         from apps.brain.models import ProcessingJob
-        from .models import ExamSession, ExamConfiguration
+        from .models import ExamSession, ShortAnswerEvaluation, ExamAnswer, ExamConfiguration
 
         jobs = ProcessingJob.objects.filter(user=request.user).order_by('-created_at')
 
@@ -496,7 +497,7 @@ def start_exam(request, job_id):
     print(f"DEBUG: start_exam called with job_id={job_id}, user={request.user}")
     try:
         from apps.brain.models import ProcessingJob
-        from .models import ExamSession, ExamConfiguration
+        from .models import ExamSession, ShortAnswerEvaluation, ExamAnswer, ExamConfiguration
 
         # Get the processing job
         job = get_object_or_404(ProcessingJob, id=job_id, user=request.user)
@@ -565,7 +566,7 @@ def exam_session(request, session_id):
     """
     print(f"DEBUG: exam_session called with session_id={session_id}, user={request.user}")
     try:
-        from .models import ExamSession, ExamAnswer
+        from .models import ExamSession, ShortAnswerEvaluation, ExamAnswer, ExamAnswer
         from apps.brain.models import QuestionAnswer
 
         # Get exam session
@@ -621,7 +622,14 @@ def exam_session(request, session_id):
             action = request.POST.get('action', 'next')
 
             if user_answer:
-                is_correct, debug_logs = evaluate_answer(user_answer, current_question)
+                # For short answer questions, we don't evaluate here - let the frontend handle API evaluation
+                if current_question.question_type == 'SHORT':
+                    # Just save the answer without evaluation - evaluation will be done via API
+                    is_correct = False  # Will be updated when API evaluation completes
+                    debug_logs = ["DEBUG: Short answer - evaluation will be done via API"]
+                else:
+                    # For multiple choice, use the old evaluation method
+                    is_correct, debug_logs = evaluate_answer(user_answer, current_question)
 
                 # Print debug logs
                 for log in debug_logs:
@@ -678,7 +686,11 @@ def exam_session(request, session_id):
             'progress_percentage': round(progress_percentage, 1),
         }
 
-        return render(request, 'exam_session.html', context)
+        # Use different template for short answer questions
+        if current_question.question_type == 'SHORT':
+            return render(request, 'short_exam_session.html', context)
+        else:
+            return render(request, 'exam_session.html', context)
 
     except Exception as e:
         print(f"DEBUG: Exception in exam_session: {str(e)}")
@@ -694,7 +706,7 @@ def submit_exam(request, session_id):
     Submit exam and redirect to results
     """
     try:
-        from .models import ExamSession
+        from .models import ExamSession, ShortAnswerEvaluation, ExamAnswer
 
         exam_session = get_object_or_404(ExamSession, session_id=session_id, user=request.user)
 
@@ -721,7 +733,7 @@ def exam_result(request, session_id):
     """
     print(f"DEBUG: exam_result called with session_id={session_id}, user={request.user}")
     try:
-        from .models import ExamSession, ExamAnswer
+        from .models import ExamSession, ShortAnswerEvaluation, ExamAnswer, ExamAnswer
 
         exam_session = get_object_or_404(ExamSession, session_id=session_id, user=request.user)
         print(f"DEBUG: Found exam session: {exam_session}")
@@ -737,6 +749,17 @@ def exam_result(request, session_id):
         answers = ExamAnswer.objects.filter(exam_session=exam_session).order_by('question_index')
         print(f"DEBUG: Found {answers.count()} answers")
 
+        # Check if this is a short answer exam
+        is_short_answer_exam = answers.filter(question__question_type='SHORT').exists()
+        
+        # Get short answer evaluations if applicable
+        short_answer_evaluations = []
+        if is_short_answer_exam:
+            short_answer_evaluations = ShortAnswerEvaluation.objects.filter(
+                exam_session=exam_session
+            ).order_by('question_index')
+            print(f"DEBUG: Found {short_answer_evaluations.count()} short answer evaluations")
+
         # Debug each answer
         for i, answer in enumerate(answers):
             print(f"DEBUG: Answer {i+1}: Question='{answer.question.question[:50]}...', User='{answer.user_answer}', Correct='{answer.question.answer}', CorrectOption='{answer.question.correct_option}', Type='{answer.question.question_type}', IsCorrect={answer.is_correct}")
@@ -748,9 +771,53 @@ def exam_result(request, session_id):
         incorrect_answers = answered_questions - correct_answers
         print(f"DEBUG: Stats - Total: {total_questions}, Answered: {answered_questions}, Correct: {correct_answers}, Incorrect: {incorrect_answers}")
 
+        # Calculate evaluation summary for short answers
+        evaluation_summary = None
+        if is_short_answer_exam and short_answer_evaluations.exists():
+            total_score = sum(eval.score for eval in short_answer_evaluations)
+            max_score = sum(eval.max_score for eval in short_answer_evaluations)
+            avg_score = total_score / max_score * 100 if max_score > 0 else 0
+            
+            # Calculate strengths and weaknesses
+            strengths = []
+            weaknesses = []
+            
+            for eval in short_answer_evaluations:
+                if eval.accuracy_score >= 7:
+                    strengths.append("Accurate answers")
+                elif eval.accuracy_score <= 4:
+                    weaknesses.append("Accuracy issues")
+                
+                if eval.completeness_score >= 7:
+                    strengths.append("Complete responses")
+                elif eval.completeness_score <= 4:
+                    weaknesses.append("Incomplete answers")
+                
+                if eval.clarity_score >= 7:
+                    strengths.append("Clear communication")
+                elif eval.clarity_score <= 4:
+                    weaknesses.append("Unclear explanations")
+            
+            evaluation_summary = {
+                'total_score': total_score,
+                'max_score': max_score,
+                'average_score': avg_score,
+                'strengths': list(set(strengths)),
+                'weaknesses': list(set(weaknesses)),
+                'suggestions': [
+                    "Focus on providing more detailed explanations",
+                    "Include specific examples in your answers",
+                    "Structure your responses with clear points",
+                    "Review the ideal answers for better understanding"
+                ]
+            }
+
         context = {
             'exam_session': exam_session,
             'answers': answers,
+            'short_answer_evaluations': short_answer_evaluations,
+            'is_short_answer_exam': is_short_answer_exam,
+            'evaluation_summary': evaluation_summary,
             'total_questions': total_questions,
             'answered_questions': answered_questions,
             'correct_answers': correct_answers,
@@ -955,3 +1022,272 @@ def complete_flashcard(request, session_id):
     except Exception as e:
         messages.error(request, f'Error completing flashcards: {str(e)}')
         return redirect('dashboard:my_quizzes')
+
+
+# ============================================================================
+# SHORT ANSWER EVALUATION API
+# ============================================================================
+
+@login_required(login_url='auth:signupin')
+@require_http_methods(["POST"])
+@csrf_exempt
+def evaluate_short_answer(request):
+    """
+    Evaluate a single short answer question via API call.
+    This endpoint is called for each question as the user progresses through the exam.
+    """
+    try:
+        data = json.loads(request.body)
+        session_id = data.get('session_id')
+        q_id = data.get('q_id')
+        user_answer = data.get('user_answer', '').strip()
+        
+        if not all([session_id, q_id, user_answer]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required fields: session_id, q_id, user_answer'
+            }, status=400)
+        
+        # Get exam session
+        exam_session = get_object_or_404(ExamSession, session_id=session_id, user=request.user)
+        
+        if exam_session.status != 'active':
+            return JsonResponse({
+                'success': False,
+                'error': 'Exam session is not active'
+            }, status=400)
+        
+        # Get the question
+        from apps.brain.models import QuestionAnswer
+        question = get_object_or_404(QuestionAnswer, id=q_id)
+        
+        if question.question_type != 'SHORT':
+            return JsonResponse({
+                'success': False,
+                'error': 'Question is not a short answer type'
+            }, status=400)
+        
+        # Call API service for evaluation
+        api_service = APIService()
+        evaluation_result = api_service.evaluate_short_answer(
+            exam_id=str(exam_session.id),
+            user_id=str(request.user.id),
+            q_id=q_id,
+            question=question.question,
+            user_answer=user_answer
+        )
+        
+        if not evaluation_result['success']:
+            return JsonResponse({
+                'success': False,
+                'error': evaluation_result.get('error', 'Evaluation failed')
+            }, status=500)
+        
+        # Extract evaluation data
+        eval_data = evaluation_result['data']
+        
+        # Save evaluation to database
+        evaluation, created = ShortAnswerEvaluation.objects.update_or_create(
+            exam_session=exam_session,
+            question=question,
+            defaults={
+                'question_index': exam_session.current_question_index,
+                'user_answer': user_answer,
+                'score': eval_data.get('score', 0),
+                'max_score': eval_data.get('max_score', 10),
+                'feedback': eval_data.get('feedback', ''),
+                'ideal_answer': eval_data.get('ideal_answer', ''),
+                'accuracy_score': eval_data.get('accuracy_score', 0.0),
+                'completeness_score': eval_data.get('completeness_score', 0.0),
+                'clarity_score': eval_data.get('clarity_score', 0.0),
+                'structure_score': eval_data.get('structure_score', 0.0),
+                'evaluation_metadata': eval_data.get('metadata', {})
+            }
+        )
+        
+        # Also save to ExamAnswer for compatibility
+        exam_answer, created = ExamAnswer.objects.update_or_create(
+            exam_session=exam_session,
+            question=question,
+            defaults={
+                'question_index': exam_session.current_question_index,
+                'user_answer': user_answer,
+                'is_correct': evaluation.score >= (evaluation.max_score * 0.6),  # 60% threshold
+                'points_earned': evaluation.score,
+                'answer_metadata': {
+                    'evaluation_id': evaluation.id,
+                    'detailed_scores': {
+                        'accuracy': evaluation.accuracy_score,
+                        'completeness': evaluation.completeness_score,
+                        'clarity': evaluation.clarity_score,
+                        'structure': evaluation.structure_score
+                    }
+                }
+            }
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'evaluation': {
+                'q_id': q_id,
+                'score': evaluation.score,
+                'max_score': evaluation.max_score,
+                'percentage': evaluation.percentage_score,
+                'feedback': evaluation.feedback,
+                'ideal_answer': evaluation.ideal_answer,
+                'detailed_scores': {
+                    'accuracy': evaluation.accuracy_score,
+                    'completeness': evaluation.completeness_score,
+                    'clarity': evaluation.clarity_score,
+                    'structure': evaluation.structure_score
+                }
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Evaluation failed: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def store_evaluation_result(request):
+    """
+    Store evaluation result from external CRM/n8n system.
+    This endpoint receives evaluation results and stores them in the database asynchronously.
+    """
+    try:
+        data = json.loads(request.body)
+        
+        # Extract the evaluation data from the nested structure
+        if isinstance(data, list) and len(data) > 0:
+            # Handle array format from your example
+            evaluation_data = data[0].get('output', {}).get('data', {})
+        else:
+            # Handle direct object format
+            evaluation_data = data.get('data', {})
+        
+        if not evaluation_data:
+            return JsonResponse({
+                'success': False,
+                'error': 'No evaluation data found in request'
+            }, status=400)
+        
+        # Extract required fields
+        q_id = evaluation_data.get('q_id')
+        score = evaluation_data.get('score', 0)
+        max_score = evaluation_data.get('max_score', 10)
+        feedback = evaluation_data.get('feedback', '')
+        ideal_answer = evaluation_data.get('ideal_answer', '')
+        detailed_scores = evaluation_data.get('detailed_scores', {})
+        evaluation_breakdown = evaluation_data.get('evaluation_breakdown', {})
+        improvement_suggestions = evaluation_data.get('improvement_suggestions', [])
+        metadata = evaluation_data.get('metadata', {})
+        
+        if not q_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'q_id is required'
+            }, status=400)
+        
+        # Get the question and exam session
+        from apps.brain.models import QuestionAnswer
+        try:
+            question = QuestionAnswer.objects.get(id=q_id)
+        except QuestionAnswer.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Question with id {q_id} not found'
+            }, status=404)
+        
+        # Find the exam session (you might need to pass exam_id in the request)
+        exam_id = data.get('exam_id') or evaluation_data.get('exam_id')
+        if not exam_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'exam_id is required'
+            }, status=400)
+        
+        try:
+            exam_session = ExamSession.objects.get(id=exam_id)
+        except ExamSession.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Exam session with id {exam_id} not found'
+            }, status=404)
+        
+        # Get question index from exam session
+        question_index = 0
+        if q_id in exam_session.questions_order:
+            question_index = exam_session.questions_order.index(int(q_id))
+        
+        # Create or update the evaluation
+        evaluation, created = ShortAnswerEvaluation.objects.update_or_create(
+            exam_session=exam_session,
+            question=question,
+            defaults={
+                'question_index': question_index,
+                'user_answer': evaluation_data.get('user_answer', ''),
+                'score': float(score),
+                'max_score': int(max_score),
+                'feedback': feedback,
+                'ideal_answer': ideal_answer,
+                'accuracy_score': detailed_scores.get('accuracy', 0.0),
+                'completeness_score': detailed_scores.get('completeness', 0.0),
+                'clarity_score': detailed_scores.get('clarity', 0.0),
+                'structure_score': detailed_scores.get('structure', 0.0),
+                'evaluation_metadata': {
+                    'evaluation_breakdown': evaluation_breakdown,
+                    'improvement_suggestions': improvement_suggestions,
+                    'metadata': metadata
+                }
+            }
+        )
+        
+        # Also update the ExamAnswer for compatibility
+        exam_answer, created = ExamAnswer.objects.update_or_create(
+            exam_session=exam_session,
+            question=question,
+            defaults={
+                'question_index': question_index,
+                'user_answer': evaluation_data.get('user_answer', ''),
+                'is_correct': evaluation.percentage_score >= 60,  # 60% threshold
+                'points_earned': int(evaluation.score),
+                'answer_metadata': {
+                    'evaluation_id': evaluation.id,
+                    'detailed_scores': detailed_scores,
+                    'evaluation_breakdown': evaluation_breakdown,
+                    'improvement_suggestions': improvement_suggestions
+                }
+            }
+        )
+        
+        # Recalculate exam session score
+        exam_session.calculate_score()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Evaluation result stored successfully',
+            'evaluation_id': evaluation.id,
+            'score': evaluation.score,
+            'max_score': evaluation.max_score,
+            'percentage': evaluation.percentage_score
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to store evaluation: {str(e)}'
+        }, status=500)

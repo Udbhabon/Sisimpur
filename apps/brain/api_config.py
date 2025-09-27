@@ -55,6 +55,18 @@ QUESTION_TYPE_MAPPING = {
     'MULTIPLECHOICE': 'multiple_choice',
 }
 
+# Short Question API Configuration
+SHORT_QUESTION_CONFIG = {
+    'evaluation_endpoint': 'short_answer_evaluation',
+    'max_score_per_question': 10,
+    'evaluation_criteria': {
+        'accuracy': 0.4,  # 40% weight for accuracy
+        'completeness': 0.3,  # 30% weight for completeness
+        'clarity': 0.2,  # 20% weight for clarity
+        'structure': 0.1,  # 10% weight for structure
+    }
+}
+
 # Document Type Mapping
 DOCUMENT_TYPE_MAPPING = {
     'text_pdf': 'text_pdf',

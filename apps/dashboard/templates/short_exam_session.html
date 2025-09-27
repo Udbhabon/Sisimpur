@@ -1,0 +1,679 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+{% block title %}Short Answer Exam - {{ exam_session.processing_job.document_name }} - SISIMPUR{% endblock %}
+
+{% block extra_head %}
+<style>
+/* Short Answer Exam Styles */
+.exam-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    background: rgba(15, 15, 35, 0.9);
+    border-radius: 16px;
+    border: 1px solid rgba(94, 23, 235, 0.3);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.exam-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.exam-title {
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.exam-timer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 10px 15px;
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.exam-progress {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.progress-info {
+    color: #aaaaaa;
+    font-size: 0.9rem;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    margin: 0 20px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #5e17eb, #00d4ff);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.question-container {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+.question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.question-number {
+    background: linear-gradient(135deg, #5e17eb, #7c3aed);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.question-type {
+    background: rgba(0, 212, 255, 0.1);
+    color: #00d4ff;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.question-text {
+    color: #ffffff;
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+.answer-section {
+    margin-bottom: 30px;
+}
+
+.answer-input-container {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.answer-textarea {
+    width: 100%;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 1rem;
+    resize: vertical;
+    min-height: 150px;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    line-height: 1.6;
+}
+
+.answer-textarea:focus {
+    outline: none;
+    border-color: #5e17eb;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 3px rgba(94, 23, 235, 0.1);
+}
+
+.answer-textarea::placeholder {
+    color: #aaaaaa;
+    font-style: italic;
+}
+
+.voice-input-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.voice-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 8px;
+    color: #00d4ff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.voice-btn:hover {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: #00d4ff;
+}
+
+.voice-btn.recording {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    color: #ef4444;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.voice-status {
+    color: #aaaaaa;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.character-count {
+    text-align: right;
+    color: #aaaaaa;
+    font-size: 0.8rem;
+    margin-top: 5px;
+}
+
+.answer-instructions {
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    color: #00d4ff;
+    font-size: 0.9rem;
+}
+
+.answer-instructions i {
+    margin-right: 8px;
+}
+
+.navigation-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.nav-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-previous {
+    background: rgba(108, 117, 125, 0.2);
+    color: #6c757d;
+    border: 1px solid rgba(108, 117, 125, 0.3);
+}
+
+.btn-previous:hover:not(:disabled) {
+    background: rgba(108, 117, 125, 0.3);
+    color: #ffffff;
+}
+
+.btn-next {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+}
+
+.btn-next:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-1px);
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: white;
+}
+
+.btn-submit:hover {
+    background: linear-gradient(135deg, #1e7e34, #155724);
+    transform: translateY(-1px);
+}
+
+.evaluation-feedback {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+    display: none;
+}
+
+.evaluation-feedback.show {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.feedback-score {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.score-display {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #10b981;
+}
+
+.feedback-text {
+    color: #ffffff;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.warning-message {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    color: #ffc107;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .exam-container {
+        margin: 10px;
+        padding: 15px;
+    }
+    
+    .exam-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .exam-progress {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .progress-bar {
+        margin: 10px 0;
+    }
+    
+    .question-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .navigation-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .nav-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .voice-input-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="content-container">
+        <div class="exam-container">
+            <!-- Exam Header -->
+            <div class="exam-header">
+                <h1 class="exam-title">{{ exam_session.processing_job.document_name }}</h1>
+                <div class="exam-timer">
+                    <i class="ri-timer-line"></i>
+                    <span id="timer-display">{{ remaining_time|floatformat:0 }}s</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="exam-progress">
+                <span class="progress-info">Question {{ current_index|add:1 }} of {{ total_questions }}</span>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ progress_percentage }}%"></div>
+                </div>
+                <span class="progress-info">{{ progress_percentage }}% Complete</span>
+            </div>
+
+            <!-- Question Container -->
+            <div class="question-container">
+                <div class="question-header">
+                    <span class="question-number">Question {{ current_index|add:1 }}</span>
+                    <span class="question-type">Short Answer</span>
+                </div>
+
+                <div class="question-text">
+                    {{ current_question.question }}
+                </div>
+
+                <form method="post" id="exam-form">
+                    {% csrf_token %}
+                    <div class="answer-section">
+                        <!-- Answer Instructions -->
+                        <div class="answer-instructions">
+                            <i class="ri-information-line"></i>
+                            You can type your answer below or use voice input. Be as detailed and clear as possible.
+                        </div>
+
+                        <!-- Voice Input -->
+                        <div class="voice-input-container">
+                            <button type="button" class="voice-btn" id="voice-btn">
+                                <i class="ri-mic-line" id="voice-icon"></i>
+                                <span id="voice-text">Start Voice Input</span>
+                            </button>
+                            <span class="voice-status" id="voice-status">Click to start recording</span>
+                        </div>
+
+                        <!-- Answer Input -->
+                        <div class="answer-input-container">
+                            <textarea 
+                                name="answer" 
+                                id="answer-textarea" 
+                                class="answer-textarea" 
+                                placeholder="Type your detailed answer here..."
+                                required
+                                maxlength="2000"
+                            >{% if existing_answer %}{{ existing_answer.user_answer }}{% endif %}</textarea>
+                            <div class="character-count">
+                                <span id="char-count">0</span>/2000 characters
+                            </div>
+                        </div>
+
+                        <!-- Evaluation Feedback (shown after submission) -->
+                        <div class="evaluation-feedback" id="evaluation-feedback">
+                            <div class="feedback-score">
+                                <span>Your Score:</span>
+                                <span class="score-display" id="feedback-score">-</span>
+                            </div>
+                            <div class="feedback-text" id="feedback-text">
+                                <!-- Feedback will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Buttons -->
+                    <div class="navigation-buttons">
+                        <button type="submit" name="action" value="previous" class="nav-btn btn-previous"
+                                {% if not can_go_back %}disabled{% endif %}>
+                            <i class="ri-arrow-left-line"></i>
+                            Previous
+                        </button>
+
+                        <div style="flex: 1;"></div>
+
+                        {% if is_last_question %}
+                            <button type="submit" name="action" value="submit" class="nav-btn btn-submit">
+                                <i class="ri-check-line"></i>
+                                Submit Exam
+                            </button>
+                        {% else %}
+                            <button type="submit" name="action" value="next" class="nav-btn btn-next" id="next-btn">
+                                Next
+                                <i class="ri-arrow-right-line"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+
+            <!-- Warning for time -->
+            {% if remaining_time < 300 %}
+            <div class="warning-message">
+                <i class="ri-alarm-warning-line"></i>
+                <span>Warning: Less than 5 minutes remaining!</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Timer functionality
+let remainingTime = {{ remaining_time }};
+const timerDisplay = document.getElementById('timer-display');
+
+function updateTimer() {
+    if (remainingTime <= 0) {
+        // Auto-submit when time expires
+        document.getElementById('exam-form').submit();
+        return;
+    }
+    
+    const minutes = Math.floor(remainingTime / 60);
+    const seconds = remainingTime % 60;
+    timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    remainingTime--;
+}
+
+// Update timer every second
+setInterval(updateTimer, 1000);
+
+// Character count
+const textarea = document.getElementById('answer-textarea');
+const charCount = document.getElementById('char-count');
+
+textarea.addEventListener('input', function() {
+    const count = this.value.length;
+    charCount.textContent = count;
+    
+    // Change color based on character count
+    if (count > 1800) {
+        charCount.style.color = '#ef4444';
+    } else if (count > 1500) {
+        charCount.style.color = '#f59e0b';
+    } else {
+        charCount.style.color = '#aaaaaa';
+    }
+});
+
+// Voice input functionality
+let recognition;
+let isRecording = false;
+
+// Check if browser supports speech recognition
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = function() {
+        isRecording = true;
+        document.getElementById('voice-icon').className = 'ri-mic-fill';
+        document.getElementById('voice-text').textContent = 'Stop Recording';
+        document.getElementById('voice-status').textContent = 'Listening...';
+        document.getElementById('voice-btn').classList.add('recording');
+    };
+    
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        const currentText = textarea.value;
+        textarea.value = currentText + (currentText ? ' ' : '') + transcript;
+        
+        // Trigger input event to update character count
+        textarea.dispatchEvent(new Event('input'));
+    };
+    
+    recognition.onend = function() {
+        isRecording = false;
+        document.getElementById('voice-icon').className = 'ri-mic-line';
+        document.getElementById('voice-text').textContent = 'Start Voice Input';
+        document.getElementById('voice-status').textContent = 'Click to start recording';
+        document.getElementById('voice-btn').classList.remove('recording');
+    };
+    
+    recognition.onerror = function(event) {
+        isRecording = false;
+        document.getElementById('voice-icon').className = 'ri-mic-line';
+        document.getElementById('voice-text').textContent = 'Start Voice Input';
+        document.getElementById('voice-status').textContent = 'Error: ' + event.error;
+        document.getElementById('voice-btn').classList.remove('recording');
+    };
+    
+    document.getElementById('voice-btn').addEventListener('click', function() {
+        if (isRecording) {
+            recognition.stop();
+        } else {
+            recognition.start();
+        }
+    });
+} else {
+    // Hide voice input if not supported
+    document.querySelector('.voice-input-container').style.display = 'none';
+}
+
+// Auto-evaluation for short answers
+let evaluationInProgress = false;
+
+function evaluateAnswer() {
+    if (evaluationInProgress) return;
+    
+    const answer = textarea.value.trim();
+    if (!answer) return;
+    
+    evaluationInProgress = true;
+    const nextBtn = document.getElementById('next-btn');
+    if (nextBtn) {
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = '<i class="ri-loader-4-line"></i> Evaluating...';
+    }
+    
+    // Call evaluation API
+    fetch('{% url "dashboard:evaluate_short_answer" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            session_id: '{{ exam_session.session_id }}',
+            q_id: '{{ current_question.id }}',
+            user_answer: answer
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showEvaluationFeedback(data.evaluation);
+        } else {
+            console.error('Evaluation failed:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Evaluation error:', error);
+    })
+    .finally(() => {
+        evaluationInProgress = false;
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = 'Next <i class="ri-arrow-right-line"></i>';
+        }
+    });
+}
+
+function showEvaluationFeedback(evaluation) {
+    const feedbackDiv = document.getElementById('evaluation-feedback');
+    const scoreSpan = document.getElementById('feedback-score');
+    const feedbackText = document.getElementById('feedback-text');
+    
+    scoreSpan.textContent = `${evaluation.score}/${evaluation.max_score} (${evaluation.percentage.toFixed(1)}%)`;
+    feedbackText.innerHTML = `
+        <strong>Feedback:</strong> ${evaluation.feedback}<br><br>
+        <strong>Ideal Answer:</strong> ${evaluation.ideal_answer}
+    `;
+    
+    feedbackDiv.classList.add('show');
+}
+
+// Auto-evaluate when user stops typing (debounced)
+let evaluationTimeout;
+textarea.addEventListener('input', function() {
+    clearTimeout(evaluationTimeout);
+    evaluationTimeout = setTimeout(() => {
+        if (this.value.trim().length > 10) { // Only evaluate if answer is substantial
+            evaluateAnswer();
+        }
+    }, 2000); // Wait 2 seconds after user stops typing
+});
+
+// Track if form is being submitted to prevent beforeunload dialog
+let isFormSubmitting = false;
+
+// Prevent accidental page refresh
+function handleBeforeUnload(e) {
+    if (isFormSubmitting) {
+        return;
+    }
+    e.preventDefault();
+    e.returnValue = 'Are you sure you want to leave? Your progress may be lost.';
+}
+
+window.addEventListener('beforeunload', handleBeforeUnload);
+
+// Remove beforeunload when form is submitted
+document.getElementById('exam-form').addEventListener('submit', function() {
+    isFormSubmitting = true;
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+});
+</script>
+{% endblock %}
+

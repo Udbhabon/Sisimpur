@@ -84,25 +84,53 @@ class ExamSession(models.Model):
     def calculate_score(self):
         """Calculate final score and credit points"""
         answers = self.exam_answers.all()
-        correct_answers = answers.filter(is_correct=True).count()
-        total_questions = answers.count()
+        
+        # Check if this is a short answer exam
+        short_answer_evaluations = self.short_answer_evaluations.all()
+        
+        if short_answer_evaluations.exists():
+            # For short answer exams, use detailed evaluation scores
+            total_score = sum(eval.score for eval in short_answer_evaluations)
+            max_score = sum(eval.max_score for eval in short_answer_evaluations)
+            correct_answers = sum(1 for eval in short_answer_evaluations if eval.score >= (eval.max_score * 0.6))
+            total_questions = short_answer_evaluations.count()
+            
+            if max_score > 0:
+                self.percentage_score = (total_score / max_score) * 100
+                self.total_score = total_score
+                self.max_possible_score = max_score
+                
+                # Credit points calculation for short answers
+                # Base points: proportional to score achieved
+                # Time bonus: up to 5 extra points per question based on speed
+                base_points = int((total_score / max_score) * total_questions * 10)
+                
+                # Time bonus calculation
+                time_efficiency = min(1.0, (self.time_limit_minutes * 60) / max(1, self.get_time_elapsed_seconds()))
+                time_bonus = int(total_questions * 5 * time_efficiency)
+                
+                self.credit_points = base_points + time_bonus
+        else:
+            # For multiple choice exams, use the old method
+            correct_answers = answers.filter(is_correct=True).count()
+            total_questions = answers.count()
 
-        if total_questions > 0:
-            self.percentage_score = (correct_answers / total_questions) * 100
-            self.total_score = correct_answers
-            self.max_possible_score = total_questions
+            if total_questions > 0:
+                self.percentage_score = (correct_answers / total_questions) * 100
+                self.total_score = correct_answers
+                self.max_possible_score = total_questions
 
-            # Credit points calculation (for leaderboard)
-            # Base points: 10 per correct answer
-            # Time bonus: up to 5 extra points per question based on speed
-            # Difficulty bonus: based on question difficulty if available
-            base_points = correct_answers * 10
+                # Credit points calculation (for leaderboard)
+                # Base points: 10 per correct answer
+                # Time bonus: up to 5 extra points per question based on speed
+                # Difficulty bonus: based on question difficulty if available
+                base_points = correct_answers * 10
 
-            # Time bonus calculation
-            time_efficiency = min(1.0, (self.time_limit_minutes * 60) / max(1, self.get_time_elapsed_seconds()))
-            time_bonus = int(correct_answers * 5 * time_efficiency)
+                # Time bonus calculation
+                time_efficiency = min(1.0, (self.time_limit_minutes * 60) / max(1, self.get_time_elapsed_seconds()))
+                time_bonus = int(correct_answers * 5 * time_efficiency)
 
-            self.credit_points = base_points + time_bonus
+                self.credit_points = base_points + time_bonus
 
         self.save()
 
@@ -132,6 +160,47 @@ class ExamAnswer(models.Model):
 
     def __str__(self):
         return f"{self.exam_session.user.username} - Q{self.question_index + 1}"
+
+
+class ShortAnswerEvaluation(models.Model):
+    """Model to store detailed evaluation results for short answer questions"""
+    
+    exam_session = models.ForeignKey(ExamSession, on_delete=models.CASCADE, related_name='short_answer_evaluations')
+    question = models.ForeignKey(QuestionAnswer, on_delete=models.CASCADE)
+    question_index = models.PositiveIntegerField()
+    
+    # User's answer
+    user_answer = models.TextField()
+    
+    # Evaluation results
+    score = models.PositiveIntegerField(default=0)
+    max_score = models.PositiveIntegerField(default=10)
+    feedback = models.TextField(blank=True)
+    ideal_answer = models.TextField(blank=True)
+    
+    # Detailed scoring breakdown
+    accuracy_score = models.FloatField(default=0.0)
+    completeness_score = models.FloatField(default=0.0)
+    clarity_score = models.FloatField(default=0.0)
+    structure_score = models.FloatField(default=0.0)
+    
+    # Evaluation metadata
+    evaluated_at = models.DateTimeField(auto_now_add=True)
+    evaluation_metadata = models.JSONField(default=dict, blank=True)
+    
+    class Meta:
+        unique_together = ['exam_session', 'question']
+        ordering = ['question_index']
+    
+    def __str__(self):
+        return f"{self.exam_session.user.username} - Q{self.question_index + 1} - {self.score}/{self.max_score}"
+    
+    @property
+    def percentage_score(self):
+        """Calculate percentage score for this answer"""
+        if self.max_score == 0:
+            return 0.0
+        return (self.score / self.max_score) * 100
 
 
 class FlashcardSession(models.Model):

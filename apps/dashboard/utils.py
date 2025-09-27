@@ -76,17 +76,20 @@ def evaluate_answer(user_answer, current_question):
             )
 
     else:  # Short answer
+        # Create the JSON template as a separate string to avoid f-string formatting issues
+        json_template = """{
+            "score": <int out of 20>,
+            "justification": "<why this score was given>",
+            "improvement": "<how to improve to get 20>"
+        }"""
+        
         prompt = (
             f"You are an exam evaluator. Evaluate the student's answer strictly and return JSON only.\n\n"
             f"Question: {current_question.question}\n"
             f"Expected Answer: {current_question.answer}\n"
             f"User's Answer: {user_raw}\n\n"
             f"Return a JSON object like this:\n"
-            f"""{
-            "score": <int out of 20>,
-            "justification": "<why this score was given>",
-            "improvement": "<how to improve to get 20>"
-            }"""
+            f"{json_template}"
         )
         try:
             model = genai.GenerativeModel("models/gemini-1.5-flash")

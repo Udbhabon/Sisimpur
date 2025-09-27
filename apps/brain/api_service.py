@@ -19,7 +19,7 @@ from pathlib import Path
 from .api_config import (
     API_ENDPOINTS, API_HEADERS, API_AUTH, API_CONFIG,
     LANGUAGE_MAPPING, QUESTION_TYPE_MAPPING, DOCUMENT_TYPE_MAPPING,
-    ERROR_MESSAGES, SUCCESS_MESSAGES, API_LOGGING
+    ERROR_MESSAGES, SUCCESS_MESSAGES, API_LOGGING, SHORT_QUESTION_CONFIG
 )
 
 logger = logging.getLogger("sisimpur.brain.api_service")
@@ -305,6 +305,56 @@ class APIService:
             }
     
     # Auto generation is covered by passing question_number='optimal' on the same endpoint
+    
+    def evaluate_short_answer(self, exam_id: str, user_id: str, q_id: str, 
+                             question: str, user_answer: str) -> Dict[str, Any]:
+        """
+        Evaluate a single short answer question using API.
+        
+        Args:
+            exam_id: Unique exam identifier
+            user_id: User identifier
+            q_id: Question identifier
+            question: The question text
+            user_answer: User's answer to evaluate
+            
+        Returns:
+            API response with evaluation results
+        """
+        try:
+            logger.info(f"🎯 Evaluating short answer for question {q_id}")
+            
+            request_data = {
+                'exam_id': exam_id,
+                'user_id': user_id,
+                'q_id': q_id,
+                'question': question,
+                'user_answer': user_answer,
+                'max_score': SHORT_QUESTION_CONFIG['max_score_per_question'],
+                'evaluation_criteria': SHORT_QUESTION_CONFIG['evaluation_criteria']
+            }
+            
+            response = self._make_request(
+                'single',
+                data=request_data,
+                query={'event': SHORT_QUESTION_CONFIG['evaluation_endpoint']},
+                use_multipart=False
+            )
+            
+            if response['success']:
+                logger.info(f"✅ Short answer evaluation completed for question {q_id}")
+            else:
+                logger.error(f"❌ Short answer evaluation failed for question {q_id}: {response.get('error', 'Unknown error')}")
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error evaluating short answer for question {q_id}: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': ERROR_MESSAGES.get('evaluation_failed', 'Answer evaluation failed')
+            }
     
     def analyze_document(self, file_path: str) -> Dict[str, Any]:
         """

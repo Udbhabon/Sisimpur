@@ -7,7 +7,6 @@ from django.utils import timezone
 from django.contrib import messages
 import uuid
 import random
-from .utils import evaluate_answer
 import json
 from .models import ExamSession, ShortAnswerEvaluation, ExamAnswer
 from apps.utils import send_document_processing_success_webhook, send_document_processing_failed_webhook, send_exam_completion_webhook

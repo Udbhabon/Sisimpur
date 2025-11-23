@@ -37,8 +37,8 @@ class EmailOTP(models.Model):
     @classmethod
     def generate_otp(cls, user, email, ip_address=None):
         """Generate a new secure OTP for user email"""
-        # Invalidate any existing OTPs for this user/email
-        cls.objects.filter(user=user, email=email, is_verified=False).update(is_verified=True)
+        # Remove any existing unverified OTPs instead of marking them verified
+        cls.objects.filter(user=user, email=email, is_verified=False).delete()
 
         # Generate OTP code
         otp_length = settings.OTP_CONFIG.get('OTP_LENGTH', 6)
@@ -79,20 +79,16 @@ class EmailOTP(models.Model):
 
     def verify(self, entered_otp):
         """Verify the entered OTP using secure hash comparison"""
-        self.attempts += 1
-        self.save()
-
         if not self.is_valid():
             return False
-
-        # Hash the entered OTP and compare with stored hash
         entered_hash = hashlib.sha256(entered_otp.encode()).hexdigest()
-
         if self.otp_hash == entered_hash:
             self.is_verified = True
             self.save()
             return True
-
+        # Increment attempts only on failure
+        self.attempts += 1
+        self.save()
         return False
 
     @classmethod

@@ -6,6 +6,397 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_protect
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+import os
+import re
+import json
+from apps.utils import (
+    send_webhook,
+    send_user_signup_webhook,
+    send_user_login_webhook,
+    send_normal_signin_webhook,
+    send_google_signin_webhook
+)
+
+# Get the User model
+User = get_user_model()
+
+# Allow insecure transport in development
+if settings.DEBUG:
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+def signupin(request):
+    """
+    View for the sign in / sign up page
+    """
+    if request.user.is_authenticated:
+        return redirect('dashboard:home')
+
+    social_action = request.GET.get("social")
+    if social_action:
+        if social_action == "google":
+            return redirect('auth:google_login')
+        elif social_action == "facebook":
+            messages.warning(request, "Facebook integration is under maintenance.", extra_tags="Facebook")
+        elif social_action == "github":
+            messages.success(request, "GitHub authentication is ready to use!", extra_tags="GitHub")
+        elif social_action == "linkedin":
+            messages.error(request, "LinkedIn sign-in is temporarily unavailable.", extra_tags="LinkedIn")
+        return redirect("auth:signupin")
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'login':
+            return handle_login(request)
+        elif action == 'signup':
+            return handle_signup(request)
+
+    return render(request, "signupin.html")
+
+
+def handle_login(request):
+    """Handle user login"""
+    email = request.POST.get('email', '').strip()
+    password = request.POST.get('password', '')
+
+    if not email or not password:
+        messages.error(request, "Please enter both email and password.")
+        return render(request, "signupin.html")
+
+    if not (email.endswith('@gmail.com') or email.endswith('@googlemail.com')):
+        messages.error(request, "Only Gmail addresses (@gmail.com or @googlemail.com) are allowed.")
+        return render(request, "signupin.html")
+
+    try:
+        user_obj = User.objects.get(email=email)
+        user = authenticate(request, username=user_obj.username, password=password)
+    except User.DoesNotExist:
+        user = None
+
+    if user is not None and user.is_active:
+        login(request, user)
+        try:
+            send_normal_signin_webhook(user)
+        except Exception:
+            pass
+        messages.success(request, f"Welcome back, {user.get_full_name() or user.email}!")
+        next_page = request.GET.get('next', 'dashboard:home')
+        return redirect(next_page)
+    messages.error(request, "Invalid email or password." if user is None else "Your account has been disabled.")
+    return render(request, "signupin.html")
+
+
+def handle_signup(request):
+    """Finalize signup after OTP verification by setting password and activating user"""
+    email = request.POST.get('email', '').strip()
+    password = request.POST.get('password', '')
+    password_confirm = request.POST.get('password_confirm', '')
+
+    if not request.session.get('otp_verified'):
+        messages.error(request, "Please verify your email first.")
+        return render(request, "signupin.html")
+
+    pending_user_id = request.session.get('pending_user_id')
+    pending_email = request.session.get('pending_email')
+    if not pending_user_id or pending_email != email:
+        messages.error(request, "Invalid verification session. Please start over.")
+        return render(request, "signupin.html")
+
+    errors = []
+    if not email:
+        errors.append("Email is required.")
+    elif not (email.endswith('@gmail.com') or email.endswith('@googlemail.com')):
+        errors.append("Only Gmail addresses (@gmail.com or @googlemail.com) are allowed.")
+    if not password:
+        errors.append("Password is required.")
+    elif password != password_confirm:
+        errors.append("Passwords do not match.")
+    if password:
+        try:
+            validate_password(password)
+        except ValidationError as e:
+            errors.extend(e.messages)
+    if errors:
+        for error in errors:
+            messages.error(request, error)
+        return render(request, "signupin.html")
+
+    try:
+        user = User.objects.get(id=pending_user_id, email=email, is_active=False)
+        user.set_password(password)
+        user.is_active = True
+        user.save()
+        request.session.pop('pending_user_id', None)
+        request.session.pop('pending_email', None)
+        request.session.pop('otp_verified', None)
+        from .email_service import EmailService
+        EmailService.send_welcome_email(user, email)
+        login(request, user)
+        try:
+            send_user_signup_webhook(user)
+        except Exception:
+            pass
+        messages.success(request, f"Welcome to Sisimpur, {user.email}! Your account has been created successfully.")
+        return redirect('dashboard:home')
+    except User.DoesNotExist:
+        messages.error(request, "Invalid verification session. Please start over.")
+        return render(request, "signupin.html")
+    except Exception as e:
+        messages.error(request, f"An error occurred while creating your account: {str(e)}")
+        return render(request, "signupin.html")
+
+
+@login_required
+def logout_view(request):
+    username = request.user.username
+    logout(request)
+    messages.success(request, f"Goodbye {username}! You have been logged out successfully.")
+    return redirect('home')
+
+
+def google_login(request):
+    try:
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": settings.GOOGLE_OAUTH2_CLIENT_ID,
+                    "client_secret": settings.GOOGLE_OAUTH2_CLIENT_SECRET,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [settings.GOOGLE_OAUTH2_REDIRECT_URI],
+                }
+            },
+            scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'],
+            redirect_uri=settings.GOOGLE_OAUTH2_REDIRECT_URI
+        )
+        authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true', prompt='consent')
+        request.session['state'] = state
+        return redirect(authorization_url)
+    except Exception as e:
+        messages.error(request, f"Error initiating Google login: {str(e)}")
+        return redirect('auth:signupin')
+
+
+def google_callback(request):
+    try:
+        incoming_state = request.GET.get('state')
+        if not incoming_state or incoming_state != request.session.get('state'):
+            messages.error(request, "Invalid OAuth state. Please retry login.")
+            return redirect('auth:signupin')
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": settings.GOOGLE_OAUTH2_CLIENT_ID,
+                    "client_secret": settings.GOOGLE_OAUTH2_CLIENT_SECRET,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [settings.GOOGLE_OAUTH2_REDIRECT_URI],
+                }
+            },
+            scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'],
+            state=request.session.get('state'),
+            redirect_uri=settings.GOOGLE_OAUTH2_REDIRECT_URI
+        )
+        flow.fetch_token(authorization_response=request.build_absolute_uri())
+        credentials = flow.credentials
+        service = build('oauth2', 'v2', credentials=credentials)
+        user_info = service.userinfo().get().execute()
+        email = user_info.get('email')
+        if not email:
+            messages.error(request, "Could not get email from Google account.")
+            return redirect('auth:signupin')
+        first_name = user_info.get('given_name', '')
+        last_name = user_info.get('family_name', '')
+        picture_url = user_info.get('picture', '')
+        try:
+            user = User.objects.get(email=email)
+            updated = False
+            if first_name and user.first_name != first_name:
+                user.first_name = first_name; updated = True
+            if last_name and user.last_name != last_name:
+                user.last_name = last_name; updated = True
+            if updated: user.save()
+        except User.DoesNotExist:
+            username = email.split('@')[0]
+            base_username = username; counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"; counter += 1
+            user = User.objects.create_user(username=username, email=email, first_name=first_name, last_name=last_name)
+        if picture_url:
+            from .utils import download_google_profile_picture, ensure_media_directories
+            try:
+                ensure_media_directories()
+                success = download_google_profile_picture(user, picture_url)
+                if not success and hasattr(user, 'profile'):
+                    user.profile.google_picture_url = picture_url; user.profile.save()
+            except Exception:
+                try:
+                    if hasattr(user, 'profile'):
+                        user.profile.google_picture_url = picture_url; user.profile.save()
+                except Exception:
+                    pass
+        login(request, user)
+        send_google_signin_webhook(user)
+        messages.success(request, f"Welcome {user.get_full_name() or user.username}!")
+        return redirect('dashboard:home')
+    except Exception as e:
+        messages.error(request, f"An error occurred during Google authentication: {str(e)}")
+        return redirect('auth:signupin')
+
+
+def verify_otp(request):
+    pending_user_id = request.session.get('pending_user_id')
+    pending_email = request.session.get('pending_email')
+    if not pending_user_id or not pending_email:
+        messages.error(request, "No pending verification found. Please sign up again.")
+        return redirect('auth:signupin')
+    try:
+        user = User.objects.get(id=pending_user_id, email=pending_email, is_active=False)
+    except User.DoesNotExist:
+        messages.error(request, "Invalid verification session. Please sign up again.")
+        return redirect('auth:signupin')
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'verify':
+            return handle_otp_verification(request, user, pending_email)
+        elif action == 'resend':
+            return handle_otp_resend(request, user, pending_email)
+    return render(request, "verify_otp.html", {'email': pending_email, 'username': user.username})
+
+
+def handle_otp_verification(request, user, email):
+    otp_code = request.POST.get('otp_code', '').strip()
+    if not otp_code:
+        messages.error(request, "Please enter the verification code.")
+        return render(request, "verify_otp.html", {'email': email, 'username': user.username})
+    from .models import EmailOTP
+    try:
+        otp = EmailOTP.objects.filter(user=user, email=email, is_verified=False).latest('created_at')
+        if otp.verify(otp_code):
+            request.session['otp_verified'] = True
+            messages.success(request, "Email verified. Please set your password to complete signup.")
+            return redirect('auth:signupin')
+        else:
+            if otp.is_expired():
+                messages.error(request, "Verification code has expired. Please request a new one.")
+            elif otp.attempts >= 3:
+                messages.error(request, "Too many failed attempts. Please request a new verification code.")
+            else:
+                remaining_attempts = 3 - otp.attempts
+                messages.error(request, f"Invalid verification code. {remaining_attempts} attempts remaining.")
+    except EmailOTP.DoesNotExist:
+        messages.error(request, "No verification code found. Please request a new one.")
+    return render(request, "verify_otp.html", {'email': email, 'username': user.username})
+
+
+def handle_otp_resend(request, user, email):
+    from .models import EmailOTP
+    from .email_service import EmailService
+    from django.utils import timezone
+    cooldown_minutes = settings.OTP_CONFIG.get('RESEND_COOLDOWN_MINUTES', 2)
+    recent_otp = EmailOTP.objects.filter(user=user, email=email, created_at__gte=timezone.now() - timezone.timedelta(minutes=cooldown_minutes)).first()
+    if recent_otp:
+        messages.warning(request, f"Please wait {cooldown_minutes} minutes before requesting a new code.")
+        return render(request, "verify_otp.html", {'email': email, 'username': user.username})
+    try:
+        otp = EmailOTP.generate_otp(user, email)
+        email_sent = EmailService.send_otp_email(user, email, otp._plain_otp)
+        if email_sent:
+            messages.success(request, f"New verification code sent to {email}")
+        else:
+            messages.error(request, "Failed to send verification code. Please try again.")
+    except Exception as e:
+        messages.error(request, f"Error sending verification code: {str(e)}")
+    return render(request, "verify_otp.html", {'email': email, 'username': user.username})
+
+
+@csrf_protect
+def send_otp_ajax(request):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"OTP AJAX request received - Method: {request.method}")
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'})
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip()
+        def get_client_ip(request):
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+            return ip
+        client_ip = get_client_ip(request)
+        if not email or not (email.endswith('@gmail.com') or email.endswith('@googlemail.com')):
+            return JsonResponse({'success': False, 'message': 'Only Gmail addresses (@gmail.com or @googlemail.com) are allowed'})
+        from .models import OTPRateLimit, EmailOTP
+        rate_limit_ok, rate_limit_message = OTPRateLimit.check_rate_limit(email, client_ip)
+        if not rate_limit_ok:
+            return JsonResponse({'success': False, 'message': rate_limit_message})
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'success': False, 'message': 'Email already registered. Please try logging in.'})
+        username = email.split('@')[0]
+        original_username = username; counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{original_username}{counter}"; counter += 1
+        user = User.objects.create_user(username=username, email=email, password='temp_password', is_active=False)
+        otp = EmailOTP.generate_otp(user, email, client_ip)
+        from .email_service import EmailService
+        email_sent = EmailService.send_otp_email(user, email, otp._plain_otp)
+        if email_sent:
+            request.session['pending_user_id'] = user.id
+            request.session['pending_email'] = email
+            return JsonResponse({'success': True, 'message': 'Verification code sent successfully'})
+        user.delete()
+        return JsonResponse({'success': False, 'message': 'Failed to send verification code'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+
+
+@csrf_protect
+def verify_otp_ajax(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'})
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip()
+        otp_code = data.get('otp_code', '').strip()
+        pending_user_id = request.session.get('pending_user_id')
+        if not pending_user_id:
+            return JsonResponse({'success': False, 'message': 'No pending verification found'})
+        try:
+            user = User.objects.get(id=pending_user_id, email=email, is_active=False)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Invalid verification session'})
+        from .models import EmailOTP
+        try:
+            otp = EmailOTP.objects.filter(user=user, email=email, is_verified=False).latest('created_at')
+            if otp.verify(otp_code):
+                request.session['otp_verified'] = True
+                return JsonResponse({'success': True, 'message': 'Email verified. Complete signup with password.'})
+            else:
+                if otp.is_expired():
+                    return JsonResponse({'success': False, 'message': 'Verification code has expired'})
+                elif otp.attempts >= 3:
+                    return JsonResponse({'success': False, 'message': 'Too many failed attempts'})
+                else:
+                    remaining = 3 - otp.attempts
+                    return JsonResponse({'success': False, 'message': f'Invalid code. {remaining} attempts remaining'})
+        except EmailOTP.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'No verification code found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build

@@ -8,6 +8,7 @@ import logging
 import json
 import os
 import time
+from django.utils import timezone
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from django.core.files.storage import default_storage
@@ -201,7 +202,7 @@ class APIDocumentProcessor:
                 'source': source_name,
                 'language': self.language,
                 'total_questions': len(qa_pairs),
-                'generated_at': str(Path().cwd()),  # Current timestamp
+                'generated_at': timezone.now().isoformat(),
                 'questions': qa_pairs
             }
             
@@ -289,7 +290,8 @@ class APIDocumentProcessor:
             
             # Update job with results
             relative_output_path = os.path.relpath(output_file, settings.MEDIA_ROOT)
-            job.output_file = relative_output_path
+            # Assigning relative path is sufficient for FileField; ensure it matches upload_to convention
+            job.output_file.name = relative_output_path
             job.mark_completed()
             
             logger.info(f"✅ Job {job.id} completed successfully with {qa_count} Q&A pairs")

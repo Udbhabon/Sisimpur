@@ -203,6 +203,31 @@ class APIService:
         except Exception as e:
             logger.error(f"Error preparing multipart file: {e}")
             raise
+
+    def _prepare_file_data(self, file_path: str) -> Dict[str, Any]:
+        """
+        Prepare a JSON-friendly representation of a file (base64 + metadata).
+        Used by legacy analysis/detection endpoints.
+        """
+        try:
+            path = Path(file_path)
+            if not path.exists() or not path.is_file():
+                raise FileNotFoundError(f"File not found: {file_path}")
+            raw = path.read_bytes()
+            if len(raw) > API_CONFIG.get('max_file_size', 10_000_000):
+                raise ValueError(ERROR_MESSAGES.get('file_too_large', 'File too large'))
+            mime, _ = mimetypes.guess_type(str(path))
+            if not mime:
+                mime = 'application/octet-stream'
+            return {
+                'filename': path.name,
+                'size': len(raw),
+                'content_type': mime,
+                'base64': base64.b64encode(raw).decode('utf-8')
+            }
+        except Exception as e:
+            logger.error(f"Error preparing file data: {e}")
+            raise
     
     def process_document(self, file_path: str, num_questions: int, language: str = 'auto', 
                        question_type: str = 'MULTIPLECHOICE') -> Dict[str, Any]:

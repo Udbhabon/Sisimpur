@@ -4,7 +4,7 @@
 source venv/bin/activate
 
 # Run all tests with verbose output
-python manage.py test apps/frontend/tests apps/authentication/tests -v 2
+python manage.py test apps/frontend/tests apps/authentication/tests tests -v 2
 
 # Run specific test modules if needed
 # python manage.py test apps.frontend.tests.test_views

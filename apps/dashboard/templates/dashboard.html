@@ -136,10 +136,6 @@
                         <div class="stage-icon"><i class="ri-magic-line"></i></div>
                         <span>Generate</span>
                       </div>
-                      <div class="stage" id="stage-complete">
-                        <div class="stage-icon"><i class="ri-check-line"></i></div>
-                        <span>Complete</span>
-                      </div>
                     </div>
                   </div>
 
@@ -303,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 // Show processing status
-                showProcessingStatus();
+                // showProcessingStatus();
             });
 
             // Handle successful upload
@@ -311,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log("Dropzone success response:", response);
                 if (response.success) {
                     // Show success message
-                    showSuccessMessage(`Document processed successfully! Generated ${response.questions_generated} questions.`);
+                    showNotification(`Document processed successfully! Generated ${response.questions_generated} questions.`, 'success');
 
                     // Reload the current page after a short delay to show updated quiz list
                     setTimeout(() => {
@@ -343,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnText.style.display = 'none';
         loadingSpinner.style.display = 'inline-block';
         generateBtn.disabled = true;
-        showProcessingStatus(); // Ensure processing status is shown immediately
+        // showProcessingStatus(); // Ensure processing status is shown immediately
 
         // Set the correct URL and process the file
         myDropzone.options.url = "{% url 'dashboard:api_process_document' %}";
@@ -401,8 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const stages = [
             { name: 'upload', title: 'Uploading Document', message: 'Securely uploading your file...', progress: 25, time: '30 seconds' },
             { name: 'analyze', title: 'Analyzing Content', message: 'AI is reading and understanding your document...', progress: 50, time: '45 seconds' },
-            { name: 'generate', title: 'Generating Questions', message: 'Creating intelligent questions from your content...', progress: 85, time: '15 seconds' },
-            { name: 'complete', title: 'Almost Done', message: 'Finalizing your quiz...', progress: 100, time: 'Complete!' }
+            { name: 'generate', title: 'Generating Questions', message: 'Creating intelligent questions from your content...', progress: 85, time: '15 seconds' }
         ];
 
         let stageIndex = 0;
@@ -594,14 +589,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 progress: 85,
                 time: '10-20 seconds',
                 duration: 4000
-            },
-            {
-                name: 'complete',
-                title: 'Finalizing',
-                message: 'Adding finishing touches to your quiz...',
-                progress: 98,
-                time: 'Almost done!',
-                duration: 2000
             }
         ];
 
@@ -714,8 +701,7 @@ function demoProcessingAnimation() {
     const stages = [
         { name: 'upload', title: 'Demo: Uploading', message: 'Simulating file upload...', progress: 25, time: '5 seconds' },
         { name: 'analyze', title: 'Demo: Analyzing', message: 'Simulating content analysis...', progress: 50, time: '3 seconds' },
-        { name: 'generate', title: 'Demo: Generating', message: 'Simulating question generation...', progress: 85, time: '2 seconds' },
-        { name: 'complete', title: 'Demo Complete!', message: 'Animation demo finished successfully!', progress: 100, time: 'Done!' }
+        { name: 'generate', title: 'Demo: Generating', message: 'Simulating question generation...', progress: 85, time: '2 seconds' }
     ];
 
     let stageIndex = 0;

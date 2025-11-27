@@ -259,87 +259,17 @@ def api_process_document(request):
         job.document_file = saved_path
         job.save()
 
-        # Start processing synchronously using API-based processor
-        try:
-            job.status = 'processing'
-            job.save()
+        # Start processing in background thread
+        from apps.brain.services import BackgroundProcessor
+        BackgroundProcessor.process_job_in_background(job.id)
 
-            # Get full file path for processing
-            full_file_path = default_storage.path(saved_path)
-
-            # Process document via single-endpoint API-based processor
-            from apps.brain.api_processor import APIDocumentProcessor
-            from apps.brain.models import QuestionAnswer
-
-            processor = APIDocumentProcessor(language=language)
-            output_file = processor.process_document(
-                full_file_path,
-                num_questions=num_questions,
-                question_type=question_type
-            )
-
-            # Load results and save to database
-            import json
-            with open(output_file, 'r', encoding='utf-8') as f:
-                qa_data = json.load(f)
-
-            # Save Q&A pairs to database
-            for qa_item in qa_data.get('questions', []):
-                QuestionAnswer.objects.create(
-                    job=job,
-                    question=qa_item.get('question', ''),
-                    answer=qa_item.get('answer', ''),
-                    question_type=question_type,
-                    options=qa_item.get('options', []),
-                    correct_option=qa_item.get('correct_option', ''),
-                    confidence_score=qa_item.get('confidence_score'),
-                    source_text=qa_item.get('source_text', '')
-                )
-
-            # Save output file path
-            output_filename = f'brain/qa_outputs/{job.id}_results.json'
-            with open(default_storage.path(output_filename), 'w', encoding='utf-8') as f:
-                json.dump(qa_data, f, ensure_ascii=False, indent=2)
-            job.output_file = output_filename
-
-            # Mark job as completed
-            job.mark_completed()
-
-            # Send Discord webhook for processing (success)
-            questions_count = len(qa_data.get('questions', []))
-            send_document_processing_success_webhook(request.user, job, questions_count, qa_data)
-
-            # Prepare form settings and detected values for response
-            form_settings = {
-                'selected_language': language,
-                'selected_question_type': question_type,
-                'selected_num_questions': num_questions,
-            }
-
-            # Metadata, if present in response, will be included in qa_data['metadata'] by n8n
-            detected_values = qa_data.get('metadata', {})
-
-            return JsonResponse({
-                'success': True,
-                'job_id': job.id,
-                'message': 'Document processed successfully via API',
-                'questions_generated': questions_count,
-                'form_settings': form_settings,
-                'detected_values': detected_values,
-                'processing_method': 'API'
-            })
-
-        except Exception as processing_error:
-            # Mark job as failed
-            job.mark_failed(str(processing_error))
-
-            # Send Discord webhook for failed processing
-            send_document_processing_failed_webhook(request.user, job, str(processing_error), None)
-
-            return JsonResponse({
-                'success': False,
-                'error': f'Processing failed: {str(processing_error)}'
-            }, status=500)
+        # Return immediate response
+        return JsonResponse({
+            'success': True,
+            'job_id': job.id,
+            'message': 'Document processing started in background',
+            'processing_method': 'API_ASYNC'
+        })
 
     except Exception as e:
         return JsonResponse({

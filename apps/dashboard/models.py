@@ -318,3 +318,32 @@ class ExamConfiguration(models.Model):
             # Create default configuration if none exists
             config = cls.objects.create()
         return config
+
+
+class ExamRequest(models.Model):
+    """Model to store user requests for new exams"""
+    
+    QUESTION_TYPE_CHOICES = [
+        ('MCQ', 'Multiple Choice Questions (MCQ)'),
+        ('CQ', 'Creative Questions (CQ)'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending Confirmation'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('completed', 'Completed'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exam_requests')
+    subject = models.CharField(max_length=100)
+    topics = models.TextField(help_text="Comma separated topics")
+    marks = models.PositiveIntegerField(help_text="Marks between 20 and 100")
+    question_type = models.CharField(max_length=10, choices=QUESTION_TYPE_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.subject} ({self.status})"
+

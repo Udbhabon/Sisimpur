@@ -9,6 +9,7 @@ import uuid
 import random
 import json
 from .models import ExamSession, ShortAnswerEvaluation, ExamAnswer
+from .forms import ExamRequestForm
 from apps.utils import send_document_processing_success_webhook, send_document_processing_failed_webhook, send_exam_completion_webhook
 from apps.brain.api_service import APIService
 
@@ -1220,3 +1221,28 @@ def store_evaluation_result(request):
             'success': False,
             'error': f'Failed to store evaluation: {str(e)}'
         }, status=500)
+
+@login_required(login_url='auth:signupin')
+def give_exam(request):
+    """
+    Handle the Give Exam request form.
+    """
+    if request.method == 'POST':
+        form = ExamRequestForm(request.POST)
+        if form.is_valid():
+            exam_request = form.save(commit=False)
+            exam_request.user = request.user
+            exam_request.save()
+            messages.success(request, "Your exam request has been submitted and is pending confirmation.")
+            return redirect('dashboard:give_exam')
+    else:
+        form = ExamRequestForm()
+    
+    # Get recent requests to show status
+    recent_requests = request.user.exam_requests.all().order_by('-created_at')[:5]
+    
+    context = {
+        'form': form,
+        'recent_requests': recent_requests
+    }
+    return render(request, "give_exam.html", context)

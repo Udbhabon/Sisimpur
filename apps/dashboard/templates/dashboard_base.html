@@ -43,6 +43,12 @@
                             <span class="nav-text">New Quiz</span>
                         </a>
                     </li>
+                    <li class="nav-item {% if request.resolver_match.url_name == 'give_exam' %}active{% endif %}">
+                        <a href="{% url 'dashboard:give_exam' %}">
+                            <i class="ri-pencil-ruler-2-line"></i>
+                            <span class="nav-text">Give Exam</span>
+                        </a>
+                    </li>
                     <li class="nav-item {% if request.resolver_match.url_name == 'my_quizzes' %}active{% endif %}">
                         <a href="{% url 'dashboard:my_quizzes' %}">
                             <i class="ri-file-list-3-line"></i>

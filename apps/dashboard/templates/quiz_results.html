@@ -1,6 +1,11 @@
 {% extends 'dashboard_base.html' %} 
 {% load static %}
 {% block title %} Quiz Results - SISIMPUR {% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/quiz_results.css' %}">
+{% endblock %}
+
 {% block content %}
 
 <div class="content-wrapper">
@@ -147,13 +152,6 @@
       </div>
     </div>
     
-    <script>
-    // Auto-refresh for processing jobs
-    setTimeout(() => {
-        location.reload();
-    }, 5000);
-    </script>
-    
     {% else %}
     <div class="error-state">
       <div class="error-icon">
@@ -170,21 +168,8 @@
   </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const viewButtons = document.querySelectorAll('.view-btn');
-    const questionsContainer = document.getElementById('questions-container');
-    
-    viewButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-            viewButtons.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            const view = this.dataset.view;
-            questionsContainer.className = view === 'cards' ? 'questions-grid' : 'questions-list';
-        });
-    });
-});
-</script>
+{% endblock %}
 
+{% block scripts %}
+<script src="{% static 'js/quiz_results.js' %}"></script>
 {% endblock %}

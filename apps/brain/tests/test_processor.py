@@ -39,7 +39,10 @@ class APIDocumentProcessorTests(TestCase):
         api_data_3 = {'results': {'questions': [{'question': 'Q3', 'answer': 'A3'}]}}
         # Fallback discovery
         api_data_4 = {'misc': [{'question': 'Q4', 'answer': 'A4'}]}
+        # n8n output wrapper dict format
+        api_data_5 = {'output': {'success': True, 'data': {'questions': [{'question': 'Q5', 'answer': 'A5'}]}}}
         self.assertEqual(len(processor._extract_qa_pairs(api_data_1)), 1)
         self.assertEqual(len(processor._extract_qa_pairs(api_data_2)), 1)
         self.assertEqual(len(processor._extract_qa_pairs(api_data_3)), 1)
         self.assertEqual(len(processor._extract_qa_pairs(api_data_4)), 1)
+        self.assertEqual(len(processor._extract_qa_pairs(api_data_5)), 1)

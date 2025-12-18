@@ -139,6 +139,15 @@ class APIDocumentProcessor:
         """
         try:
             qa_pairs = []
+
+            # Unwrap common n8n response shapes if they slip past the service normalization
+            # e.g. { "output": { "success": true, "data": { "questions": [...] } } }
+            if isinstance(api_data, dict) and 'output' in api_data and isinstance(api_data.get('output'), dict):
+                output = api_data.get('output') or {}
+                if isinstance(output.get('data'), dict):
+                    api_data = output.get('data') or {}
+                else:
+                    api_data = output
             
             # Handle different API response formats
             if 'questions' in api_data:

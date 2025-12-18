@@ -8,7 +8,7 @@ import os
 from django.conf import settings
 
 # Single API Base URL (n8n webhook)
-API_BASE_URL = os.getenv('SISIMPUR_API_URL', 'https://n8n.quantumos.ai/webhook/sisimpur')
+API_BASE_URL = os.getenv('SISIMPUR_API_URL', 'https://rsegh.millenniumonline.tv/webhook/sisimpur')
 
 # Single API Endpoint (all operations via event query)
 API_ENDPOINTS = {

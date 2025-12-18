@@ -116,7 +116,17 @@ class APIService:
                                     normalized_data = output
                                 normalized_success = output.get('success', True)
                     elif isinstance(raw, dict):
-                        if 'data' in raw and isinstance(raw['data'], dict):
+                        # Some n8n workflows return a single dict with `output` wrapper
+                        if 'output' in raw and isinstance(raw.get('output'), dict):
+                            output = raw.get('output') or {}
+                            if 'data' in output and isinstance(output['data'], dict):
+                                normalized_data = output['data']
+                            elif 'questions' in output:
+                                normalized_data = output
+                            else:
+                                normalized_data = output
+                            normalized_success = output.get('success', True)
+                        elif 'data' in raw and isinstance(raw['data'], dict):
                             normalized_data = raw['data']
                             normalized_success = raw.get('success', True)
                         else:

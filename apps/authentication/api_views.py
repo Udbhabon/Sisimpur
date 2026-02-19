@@ -13,6 +13,7 @@ from . import views as auth_views
 
 @swagger_auto_schema(
     method="post",
+    tags=["Auth - OTP Verification"],
     operation_summary="Send OTP",
     operation_description="Send an OTP verification code to the given Gmail address for signup.",
     request_body=openapi.Schema(
@@ -41,6 +42,7 @@ def send_otp(request):
 
 @swagger_auto_schema(
     method="post",
+    tags=["Auth - OTP Verification"],
     operation_summary="Verify OTP",
     operation_description="Verify the OTP code sent to the user's email during signup.",
     request_body=openapi.Schema(
@@ -70,6 +72,7 @@ def verify_otp(request):
 
 @swagger_auto_schema(
     method="post",
+    tags=["Auth - Account"],
     operation_summary="Login",
     operation_description="Authenticate with email and password. Returns session cookie.",
     request_body=openapi.Schema(
@@ -97,6 +100,7 @@ def login(request):
 
 @swagger_auto_schema(
     method="post",
+    tags=["Auth - Account"],
     operation_summary="Signup",
     operation_description="Complete signup after OTP verification. Sets password and activates account.",
     request_body=openapi.Schema(
@@ -125,6 +129,7 @@ def signup(request):
 
 @swagger_auto_schema(
     method="post",
+    tags=["Auth - Account"],
     operation_summary="Logout",
     operation_description="Log out the current user and invalidate the session.",
     responses={200: "Redirect to home page"},
@@ -137,6 +142,7 @@ def logout(request):
 
 @swagger_auto_schema(
     method="get",
+    tags=["Auth - Google OAuth"],
     operation_summary="Google OAuth Login",
     operation_description="Initiate Google OAuth2 login flow. Redirects to Google consent screen.",
     responses={302: "Redirect to Google"},
@@ -149,6 +155,7 @@ def google_login(request):
 
 @swagger_auto_schema(
     method="get",
+    tags=["Auth - Google OAuth"],
     operation_summary="Google OAuth Callback",
     operation_description="Callback endpoint for Google OAuth2 flow. Do not call directly.",
     responses={302: "Redirect to dashboard"},

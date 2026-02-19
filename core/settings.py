@@ -271,3 +271,17 @@ LOGGING = {
         },
     },
 }
+
+# ---------------------------------------------------------------------------
+# Swagger / drf-yasg
+# ---------------------------------------------------------------------------
+SWAGGER_SETTINGS = {
+    "DEFAULT_INFO": "core.urls.schema_view",
+    "USE_SESSION_AUTH": True,
+    "TAGS_SORTER": "alpha",
+    "OPERATIONS_SORTER": "alpha",
+    "DOC_EXPANSION": "list",
+    "DEEP_LINKING": True,
+    "DISPLAY_OPERATION_ID": False,
+    "DEFAULT_MODEL_RENDERING": "example",
+}

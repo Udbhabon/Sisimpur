@@ -13,6 +13,7 @@ from . import views as dashboard_views
 
 @swagger_auto_schema(
     method="get",
+    tags=["Dashboard - Quizzes"],
     operation_summary="Get quiz results",
     operation_description="Retrieve generated Q&A pairs, form settings, and detected values for a completed job.",
     manual_parameters=[
@@ -45,6 +46,7 @@ def quiz_results(request, job_id):
 
 @swagger_auto_schema(
     method="get",
+    tags=["Dashboard - Quizzes"],
     operation_summary="List my quizzes",
     operation_description="Return a JSON list of the current user's processing jobs.",
     responses={
@@ -96,6 +98,7 @@ def my_quizzes(request):
 
 @swagger_auto_schema(
     method="get",
+    tags=["Dashboard - Leaderboard"],
     operation_summary="Leaderboard",
     operation_description="Return top-50 leaderboard data including rank, score, badges, and current user position.",
     manual_parameters=[
@@ -180,6 +183,7 @@ def leaderboard(request):
 
 @swagger_auto_schema(
     method="post",
+    tags=["Dashboard - Exams"],
     operation_summary="Start exam",
     operation_description="Create a new exam session for a completed processing job and return the session id.",
     responses={
@@ -238,6 +242,7 @@ def start_exam(request, job_id):
 
 @swagger_auto_schema(
     method="get",
+    tags=["Dashboard - Exams"],
     operation_summary="Get exam session state",
     operation_description="Retrieve the current question and progress for an active exam session.",
     responses={
@@ -301,6 +306,7 @@ def exam_session(request, session_id):
 
 @swagger_auto_schema(
     method="post",
+    tags=["Dashboard - Exams"],
     operation_summary="Submit exam answer",
     operation_description="Submit an answer for the current question and optionally navigate or submit the exam.",
     request_body=openapi.Schema(
@@ -384,6 +390,7 @@ def answer_question(request, session_id):
 
 @swagger_auto_schema(
     method="post",
+    tags=["Dashboard - Exams"],
     operation_summary="Submit exam",
     operation_description="Forcefully complete and score the exam session.",
     responses={
@@ -421,6 +428,7 @@ def submit_exam(request, session_id):
 
 @swagger_auto_schema(
     method="get",
+    tags=["Dashboard - Exams"],
     operation_summary="Get exam result",
     operation_description="Return detailed exam results including answers, scores, and short-answer evaluations.",
     responses={
@@ -501,6 +509,7 @@ def exam_result(request, session_id):
 
 @swagger_auto_schema(
     method="post",
+    tags=["Dashboard - Flashcards"],
     operation_summary="Start flashcard session",
     operation_description="Create a new flashcard session for a completed processing job.",
     responses={
@@ -554,6 +563,7 @@ def start_flashcard(request, job_id):
 
 @swagger_auto_schema(
     method="get",
+    tags=["Dashboard - Flashcards"],
     operation_summary="Get flashcard state",
     operation_description="Get the current flashcard and progress for an active session.",
     responses={
@@ -608,6 +618,7 @@ def flashcard_session(request, session_id):
 
 @swagger_auto_schema(
     method="post",
+    tags=["Dashboard - Flashcards"],
     operation_summary="Advance flashcard",
     operation_description="Record progress on the current card and move to the next one.",
     request_body=openapi.Schema(

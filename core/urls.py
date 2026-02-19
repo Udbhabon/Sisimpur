@@ -12,7 +12,15 @@ schema_view = get_schema_view(
     openapi.Info(
         title="Sisimpur API",
         default_version="v1",
-        description="API documentation for Sisimpur backend services",
+        description=(
+            "API documentation for **Sisimpur** backend services.\n\n"
+            "## Categories\n"
+            "| Group | Description |\n"
+            "|-------|-------------|\n"
+            "| **Auth** | Registration, login, OTP verification & Google OAuth |\n"
+            "| **Brain** | Document processing, Q&A generation, evaluation |\n"
+            "| **Dashboard** | Quizzes, exams, flashcards & leaderboard |\n"
+        ),
     ),
     public=True,
     permission_classes=[permissions.AllowAny],

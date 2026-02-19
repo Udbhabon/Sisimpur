@@ -114,8 +114,8 @@ brain_cli.py                    # CLI development tool
 - `GET /api/brain/dev/jobs/` - List jobs (JSON)
 
 ### **Dashboard AJAX Endpoints:**
-- `POST /app/api/process-document/` - Upload via dashboard
-- `GET /app/api/job-status/<id>/` - Status polling
+- `POST /api/brain/process/document/` - Upload and process document
+- `GET /api/brain/jobs/<id>/status/` - Status polling
 
 ## 🧪 Testing Workflow
 

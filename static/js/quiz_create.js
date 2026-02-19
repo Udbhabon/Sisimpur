@@ -49,11 +49,11 @@ document.addEventListener('DOMContentLoaded', function() {
         paramName: "document",
         maxFilesize: 10, // MB
         maxFiles: 1,
-        acceptedFiles: ".jpg,.jpeg,.png,.pdf", // BETA: Intigrate PDF support
+        acceptedFiles: ".jpg,.jpeg,.png,.pdf,.txt",
         dictDefaultMessage: "Drop files here or click to upload",
         dictFallbackMessage: "Your browser does not support drag'n'drop file uploads.",
         dictFileTooBig: "File is too big ({{filesize}}MiB). Max filesize: {{maxFilesize}}MiB.",
-        dictInvalidFileType: "You can't upload files of this type. Only JPG, and PNG files are allowed.",
+        dictInvalidFileType: "You can't upload files of this type. Only PDF, JPG, PNG, and TXT files are allowed.",
         dictRemoveFile: "Remove file",
         previewTemplate: customPreviewTemplate, // Use the modern template
 
@@ -100,8 +100,9 @@ document.addEventListener('DOMContentLoaded', function() {
             this.on("success", function(file, response) {
                 console.log("Dropzone success response:", response);
                 if (response.success) {
+                    const generatedCount = response.qa_count || response.questions_generated || 0;
                     // Show success message
-                    showNotification(`Document processed successfully! Generated ${response.questions_generated} questions.`, 'success');
+                    showNotification(`Document processed successfully! Generated ${generatedCount} questions.`, 'success');
 
                     // Reload the current page after a short delay to show updated quiz list
                     setTimeout(() => {

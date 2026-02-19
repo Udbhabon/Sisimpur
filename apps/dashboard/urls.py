@@ -28,11 +28,4 @@ urlpatterns = [
     path('flashcard/session/<str:session_id>/', views.flashcard_session, name='flashcard_session'),
     path('flashcard/complete/<str:session_id>/', views.complete_flashcard, name='complete_flashcard'),
 
-    # API endpoints for AJAX (Document Processing Only)
-    path('api/process-document/', views.api_process_document, name='api_process_document'),
-    path('api/job-status/<int:job_id>/', views.api_job_status, name='api_job_status'),
-    
-    # Short Answer Evaluation API
-    path('api/evaluate-short-answer/', views.evaluate_short_answer, name='evaluate_short_answer'),
-    path('api/store-evaluation-result/', views.store_evaluation_result, name='store_evaluation_result'),
 ]

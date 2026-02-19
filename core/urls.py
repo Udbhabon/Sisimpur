@@ -3,6 +3,20 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.frontend.views import health_check
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Sisimpur API",
+        default_version="v1",
+        description="API documentation for Sisimpur backend services",
+    ),
+    public=True,
+    permission_classes=[permissions.AllowAny],
+)
 
 
 urlpatterns = [
@@ -10,6 +24,9 @@ urlpatterns = [
     path("healthz/", health_check, name="health_check"),  # Health check endpoint
     path("health/", health_check, name="health_check_alt"),  # Alternative health check
     path("ping/", health_check, name="ping"),  # Simple ping endpoint
+    path("api/docs/", schema_view.with_ui("swagger", cache_timeout=0), name="swagger-ui"),
+    path("api/redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="redoc-ui"),
+    path("api/swagger.json", schema_view.without_ui(cache_timeout=0), name="swagger-json"),
     path("", include("apps.frontend.urls")),
     path("auth/", include("apps.authentication.urls")),
     path("app/", include("apps.dashboard.urls")),

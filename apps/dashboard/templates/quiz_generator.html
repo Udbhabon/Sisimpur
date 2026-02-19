@@ -62,13 +62,13 @@
           <h3>Upload Document</h3>
           <p class="upload-description">Upload a document first, then click Generate to process it</p>
 
-          <div class="dropzone" id="document-dropzone" data-upload-url="{% url 'dashboard:api_process_document' %}">
+          <div class="dropzone" id="document-dropzone" data-upload-url="{% url 'brain:process_document' %}" data-results-url-base="{% url 'dashboard:quiz_results' 0 %}">
             <div class="dz-message" data-dz-message>
               <div class="upload-icon">
                 <i class="ri-upload-cloud-line"></i>
               </div>
               <h4>Drop files here or click to upload</h4>
-              <p>Supported: PDF, JPG, PNG (Max 10MB)</p>
+              <p>Supported: PDF, JPG, PNG, TXT (Max 10MB)</p>
             </div>
           </div>
 

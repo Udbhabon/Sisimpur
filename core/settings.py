@@ -72,6 +72,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",  # Required for social auth
+    "rest_framework",
+    "drf_yasg",
     "apps.authentication",
     "apps.frontend",
     "apps.dashboard",

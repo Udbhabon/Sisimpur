@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const apiLog = document.getElementById('api-log');
     const logContent = document.getElementById('log-content');
     const dropzoneElement = document.getElementById('document-dropzone');
+    const resultsUrlBase = dropzoneElement ? dropzoneElement.dataset.resultsUrlBase : '';
 
     let uploadedFile = null;
     let logEntries = [];
@@ -74,12 +75,12 @@ document.addEventListener('DOMContentLoaded', function() {
         paramName: "document",
         maxFilesize: 10, // MB
         maxFiles: 1,
-        acceptedFiles: ".pdf,.jpg,.jpeg,.png",
+        acceptedFiles: ".pdf,.jpg,.jpeg,.png,.txt",
         addRemoveLinks: true,
         dictDefaultMessage: "Drop files here or click to upload",
         dictFallbackMessage: "Your browser does not support drag'n'drop file uploads.",
         dictFileTooBig: "File is too big ({{filesize}}MiB). Max filesize: {{maxFilesize}}MiB.",
-        dictInvalidFileType: "You can't upload files of this type. Only PDF, JPG, and PNG files are allowed.",
+        dictInvalidFileType: "You can't upload files of this type. Only PDF, JPG, PNG, and TXT files are allowed.",
         dictRemoveFile: "Remove file",
 
         init: function() {
@@ -138,10 +139,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Show success message
                     showSuccessMessage(`Document processed successfully! Generated ${response.qa_count || response.questions_generated || 0} questions via API.`);
 
-                    // Reload the current page after a short delay to show updated state
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 3000);
+                    // Redirect to quiz results page for this job
+                    if (response.job_id && resultsUrlBase) {
+                        setTimeout(() => {
+                            window.location.href = resultsUrlBase.replace('/0/', `/${response.job_id}/`);
+                        }, 1200);
+                    } else {
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 3000);
+                    }
                 } else {
                     addLogEntry(`❌ API Error: ${response.error || 'Unknown error'}`, 'error');
                     showErrorMessage(response.error || 'Processing failed');

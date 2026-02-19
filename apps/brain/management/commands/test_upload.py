@@ -81,7 +81,7 @@ class Command(BaseCommand):
         )
 
         # Test the upload
-        response = client.post('/app/api/process-document/', {
+        response = client.post('/api/brain/process/document/', {
             'document': uploaded_file,
             'language': 'auto',
             'question_type': 'MULTIPLECHOICE',
@@ -95,7 +95,7 @@ class Command(BaseCommand):
                 data = response.json()
                 if data.get('success'):
                     job_id = data.get('job_id')
-                    questions_count = data.get('questions_generated', 0)
+                    questions_count = data.get('qa_count', 0)
                     
                     self.stdout.write(self.style.SUCCESS(f'✓ Upload successful!'))
                     self.stdout.write(f'  Job ID: {job_id}')

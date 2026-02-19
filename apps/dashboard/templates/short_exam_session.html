@@ -11,7 +11,7 @@
     <div class="content-container">
         <div class="exam-container" 
              data-remaining-time="{{ remaining_time }}" 
-             data-evaluate-url="{% url 'dashboard:evaluate_short_answer' %}"
+               data-evaluate-url="{% url 'brain:evaluate_short_answer' %}"
              data-session-id="{{ exam_session.session_id }}"
              data-question-id="{{ current_question.id }}">
             <!-- Exam Header -->

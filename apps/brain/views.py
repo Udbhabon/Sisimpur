@@ -154,6 +154,28 @@ def process_document(request):
         )
 
 
+def evaluate_short_answer(request):
+    """
+    Proxy short-answer evaluation to dashboard implementation.
+    Exposed under /api/brain/ for API consistency.
+    """
+    from apps.dashboard.views import evaluate_short_answer as dashboard_evaluate_short_answer
+
+    return dashboard_evaluate_short_answer(request)
+
+
+def store_evaluation_result(request):
+    """
+    Proxy evaluation result storage to dashboard implementation.
+    Exposed under /api/brain/ for API consistency.
+    """
+    from apps.dashboard.views import (
+        store_evaluation_result as dashboard_store_evaluation_result,
+    )
+
+    return dashboard_store_evaluation_result(request)
+
+
 @login_required
 @require_http_methods(["POST"])
 @csrf_exempt

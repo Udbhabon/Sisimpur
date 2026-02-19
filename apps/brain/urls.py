@@ -7,6 +7,10 @@ urlpatterns = [
     # Document processing endpoints (OCR + Question Generation Pipeline)
     path('process/document/', views.process_document, name='process_document'),
 
+    # Short answer evaluation endpoints
+    path('evaluate-short-answer/', views.evaluate_short_answer, name='evaluate_short_answer'),
+    path('store-evaluation-result/', views.store_evaluation_result, name='store_evaluation_result'),
+
     # Job management endpoints
     path('jobs/', views.list_jobs, name='list_jobs'),
     path('jobs/<int:job_id>/status/', views.get_job_status, name='job_status'),

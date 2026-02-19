@@ -3,6 +3,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 
 from . import views as auth_views
 
@@ -164,3 +165,37 @@ def google_login(request):
 @permission_classes([AllowAny])
 def google_callback(request):
     return auth_views.google_callback(request._request)
+
+
+@swagger_auto_schema(
+    method="get",
+    tags=["Auth - Account"],
+    operation_summary="Current User",
+    operation_description="Return the authenticated user's profile data.",
+    responses={
+        200: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "id": openapi.Schema(type=openapi.TYPE_INTEGER),
+                "username": openapi.Schema(type=openapi.TYPE_STRING),
+                "email": openapi.Schema(type=openapi.TYPE_STRING),
+                "first_name": openapi.Schema(type=openapi.TYPE_STRING),
+                "last_name": openapi.Schema(type=openapi.TYPE_STRING),
+                "full_name": openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        ),
+        401: "Not authenticated",
+    },
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def me(request):
+    user = request.user
+    return Response({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "full_name": user.get_full_name(),
+    })

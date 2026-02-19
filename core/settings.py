@@ -33,8 +33,18 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.defang.dev",
     "https://*.defang.io",
     "http://127.0.0.1:8000/",
-    "https://sisimpur.onrender.com"
+    "https://sisimpur.onrender.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
+
+# CORS (Next.js frontend)
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+SESSION_COOKIE_SAMESITE = "Lax"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # Temporarily enable for debugging
@@ -74,6 +84,7 @@ INSTALLED_APPS = [
     "django.contrib.sites",  # Required for social auth
     "rest_framework",
     "drf_yasg",
+    "corsheaders",
     "apps.authentication",
     "apps.frontend",
     "apps.dashboard",
@@ -82,6 +93,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "core.middleware.ComingSoonMiddleware",
     # 'whitenoise.middleware.WhiteNoiseMiddleware',  # Commented out for testing
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -271,6 +283,21 @@ LOGGING = {
         },
     },
 }
+
+# ---------------------------------------------------------------------------
+# CORS (Next.js frontend)
+# ---------------------------------------------------------------------------
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_HTTPONLY = True
 
 # ---------------------------------------------------------------------------
 # Swagger / drf-yasg

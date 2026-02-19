@@ -30,6 +30,8 @@ urlpatterns = [
     path("", include("apps.frontend.urls")),
     path("auth/", include("apps.authentication.urls")),
     path("app/", include("apps.dashboard.urls")),
+    path("api/auth/", include("apps.authentication.api_urls")),
+    path("api/dashboard/", include("apps.dashboard.api_urls")),
     path("api/brain/", include("apps.brain.urls")),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

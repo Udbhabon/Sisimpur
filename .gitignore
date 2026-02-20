@@ -56,6 +56,8 @@ pytestdebug.log
 # Migrations (optional if you regenerate them)
 **/migrations/*.py
 !**/migrations/__init__.py
+# Authentication app initial migration is required for the test database
+!apps/authentication/migrations/0001_initial.py
 
 # Bootstrap static frontend (basic use)
 *.map

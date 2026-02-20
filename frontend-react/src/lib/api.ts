@@ -45,6 +45,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Convert error responses to Error instances with the backend's message
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const backendMessage: string | undefined = error.response?.data?.message;
+    if (backendMessage) {
+      return Promise.reject(new Error(backendMessage));
+    }
+    return Promise.reject(error);
+  }
+);
+
 // ----------------------------------------------------------------
 // CSRF initialisation
 // ----------------------------------------------------------------
@@ -62,11 +74,13 @@ export async function initCsrf() {
 // ----------------------------------------------------------------
 export async function sendOtp(email: string): Promise<OtpResponse> {
   const { data } = await api.post<OtpResponse>("/api/auth/send-otp/", { email });
+  if (!data.success) throw new Error(data.message);
   return data;
 }
 
 export async function verifyOtp(email: string, otp_code: string): Promise<OtpResponse> {
   const { data } = await api.post<OtpResponse>("/api/auth/verify-otp/", { email, otp_code });
+  if (!data.success) throw new Error(data.message);
   return data;
 }
 
@@ -74,7 +88,6 @@ export async function login(email: string, password: string): Promise<OtpRespons
   const { data } = await api.post<OtpResponse>("/api/auth/login/", {
     email,
     password,
-    action: "login",
   });
   return data;
 }
@@ -88,7 +101,6 @@ export async function signup(
     email,
     password,
     password_confirm,
-    action: "signup",
   });
   return data;
 }

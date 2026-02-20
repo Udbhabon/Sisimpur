@@ -132,7 +132,7 @@ export default function SignInPage() {
       {/* Inject page-scoped styles */}
       <style>{PAGE_STYLE}</style>
 
-      <div className="sisimpur-bg min-h-screen flex items-center justify-center relative overflow-hidden text-gray-200">
+      <div className="sisimpur-bg min-h-screen flex relative overflow-hidden text-gray-200">
         {/* Grid overlay */}
         <div className="absolute inset-0 z-0 bg-grid opacity-100 pointer-events-none" />
 
@@ -150,12 +150,12 @@ export default function SignInPage() {
           style={{ width: 320, height: 320, background: "#581C87", top: "20%", right: "30%" }}
         />
 
-        {/* Main container */}
-        <div className="container mx-auto px-4 py-8 relative z-10 w-full max-w-6xl">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-24">
+        {/* ── Left Branding Panel ─────────────────────────────────────── */}
+        <div className="hidden lg:flex w-1/2 min-h-screen flex-col justify-center px-16 xl:px-24 relative z-10 space-y-10">
+          <div style={{display:'contents'}}>
 
             {/* â”€â”€ Left Branding Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-            <div className="w-full lg:w-1/2 flex flex-col items-center lg:items-start text-center lg:text-left space-y-8">
+            <div className="flex flex-col items-start text-left space-y-8">
               {/* Logo + Title */}
               <div className="flex items-center gap-4 mb-4">
                 <div

@@ -152,9 +152,7 @@ export default function SignInPage() {
 
         {/* ── Left Branding Panel ─────────────────────────────────────── */}
         <div className="hidden lg:flex w-1/2 min-h-screen flex-col justify-center px-16 xl:px-24 relative z-10 space-y-10">
-          <div style={{display:'contents'}}>
 
-            {/* â”€â”€ Left Branding Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="flex flex-col items-start text-left space-y-8">
               {/* Logo + Title */}
               <div className="flex items-center gap-4 mb-4">
@@ -222,8 +220,11 @@ export default function SignInPage() {
               </div>
             </div>
 
-            {/* â”€â”€ Right Glass Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-            <div className="w-full lg:w-[480px]">
+        </div>
+
+        {/* Right Form Panel */}
+        <div className="flex-1 flex items-center justify-center px-6 py-12 relative z-10">
+          <div className="w-full max-w-[480px]">
               <div className="glass-card rounded-3xl p-8 shadow-2xl relative overflow-hidden">
                 {/* Top gradient bar */}
                 <div className="absolute top-0 left-0 w-full h-0.5 top-bar-gradient opacity-50" />
@@ -483,7 +484,6 @@ export default function SignInPage() {
               </div>
             </div>
           </div>
-        </div>
 
         {/* Footer */}
         <div className="absolute bottom-4 left-0 w-full text-center pointer-events-none">

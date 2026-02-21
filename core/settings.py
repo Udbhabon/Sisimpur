@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sites",  # Required for social auth
     "rest_framework",
+    "rest_framework_simplejwt",
     "drf_yasg",
     "corsheaders",
     "apps.authentication",
@@ -242,6 +243,33 @@ BRAIN_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 BRAIN_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 BRAIN_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
+# ------------------------------------------------------------------
+# Supabase configuration
+# ------------------------------------------------------------------
+SUPABASE_URL = os.getenv('SUPABASE_URL', '')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')  # anon / publishable key
+
+# ------------------------------------------------------------------
+# Django REST Framework + JWT
+# ------------------------------------------------------------------
+from datetime import timedelta
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+}
+
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
@@ -285,16 +313,20 @@ LOGGING = {
 }
 
 # ---------------------------------------------------------------------------
-# CORS (Next.js frontend)
+# CORS (Next.js / Vite frontend)
 # ---------------------------------------------------------------------------
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_HTTPONLY = True

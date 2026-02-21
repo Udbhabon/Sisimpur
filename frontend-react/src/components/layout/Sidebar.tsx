@@ -1,6 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { logout } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/ui/ToastProvider";
 
@@ -19,14 +18,13 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { pathname } = useLocation();
-  const { clearAuth } = useAuth();
+  const { signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   async function handleLogout() {
     try {
-      await logout();
-      clearAuth();
+      await signOut();
       navigate("/signin");
     } catch {
       toast("Logout failed", "error");

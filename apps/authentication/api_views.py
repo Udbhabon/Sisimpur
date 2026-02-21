@@ -12,6 +12,7 @@ from rest_framework.decorators import api_view, parser_classes, permission_class
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from . import views as auth_views
 from .email_service import EmailService
@@ -19,6 +20,23 @@ from .email_service import EmailService
 from apps.utils import send_normal_signin_webhook, send_user_signup_webhook
 
 User = get_user_model()
+
+
+def _jwt_for_user(user):
+    """Issue an access token (string) for *user* via simplejwt."""
+    refresh = RefreshToken.for_user(user)
+    return str(refresh.access_token)
+
+
+def _user_dict(user):
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "full_name": user.get_full_name(),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -112,22 +130,15 @@ def verify_otp(request):
 @permission_classes([AllowAny])
 @parser_classes([JSONParser])
 def login(request):
-    """Authenticate with email and password, set session cookie, return JSON."""
+    """Authenticate with email and password; return JWT + user profile."""
     email = request.data.get("email", "").strip()
     password = request.data.get("password", "")
 
     if not email or not password:
         return Response({"success": False, "message": "Email and password are required."}, status=400)
 
-    if not (email.endswith("@gmail.com") or email.endswith("@googlemail.com")):
-        return Response(
-            {"success": False, "message": "Only Gmail addresses (@gmail.com or @googlemail.com) are allowed."},
-            status=400,
-        )
-
     try:
         user_obj = User.objects.get(email=email)
-        # Check for disabled accounts before Django's backend filters them out
         if not user_obj.is_active and user_obj.check_password(password):
             return Response({"success": False, "message": "Your account has been disabled."}, status=403)
         user = auth_authenticate(request._request, username=user_obj.username, password=password)
@@ -135,12 +146,12 @@ def login(request):
         user = None
 
     if user is not None:
-        auth_login(request._request, user)
         try:
             send_normal_signin_webhook(user)
         except Exception:
             pass
-        return Response({"success": True, "message": f"Welcome back, {user.get_full_name() or user.email}!"})
+        token = _jwt_for_user(user)
+        return Response({"success": True, "token": token, "user": _user_dict(user)})
 
     return Response({"success": False, "message": "Invalid email or password."}, status=401)
 
@@ -174,15 +185,16 @@ def login(request):
 @permission_classes([AllowAny])
 @parser_classes([JSONParser])
 def signup(request):
-    """Complete signup after OTP verification: set password, activate account, log in."""
+    """Complete signup after Supabase OTP verification: create Django user + return JWT."""
     email = request.data.get("email", "").strip()
     password = request.data.get("password", "")
     password_confirm = request.data.get("password_confirm", "")
 
-    pending_user_id = request._request.session.get("pending_user_id")
+    # Session state set by verify_otp_ajax
     pending_email = request._request.session.get("pending_email")
+    otp_verified = request._request.session.get("otp_verified", False)
 
-    if not pending_user_id or pending_email != email:
+    if not otp_verified or pending_email != email:
         return Response(
             {"success": False, "message": "Invalid verification session. Please start over."},
             status=400,
@@ -191,8 +203,6 @@ def signup(request):
     errors = []
     if not email:
         errors.append("Email is required.")
-    elif not (email.endswith("@gmail.com") or email.endswith("@googlemail.com")):
-        errors.append("Only Gmail addresses (@gmail.com or @googlemail.com) are allowed.")
     if not password:
         errors.append("Password is required.")
     elif password != password_confirm:
@@ -207,34 +217,33 @@ def signup(request):
         return Response({"success": False, "message": " ".join(errors)}, status=400)
 
     try:
-        # After OTP verification, the user is activated (is_active=True)
-        user = User.objects.get(id=pending_user_id, email=email, is_active=True)
-        user.set_password(password)
-        user.save()
+        # Build a unique username from the email local part
+        base_username = email.split("@")[0]
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
 
-        request._request.session.pop("pending_user_id", None)
+        user = User.objects.create_user(username=username, email=email, password=password, is_active=True)
+
+        # Clear OTP session state
         request._request.session.pop("pending_email", None)
+        request._request.session.pop("otp_verified", None)
 
         try:
             EmailService.send_welcome_email(user, email)
         except Exception:
             pass
 
-        auth_login(request._request, user)
-
         try:
             send_user_signup_webhook(user)
         except Exception:
             pass
 
-        return Response(
-            {"success": True, "message": f"Welcome to Sisimpur, {user.email}! Your account has been created successfully."}
-        )
-    except User.DoesNotExist:
-        return Response(
-            {"success": False, "message": "Invalid verification session. Please start over."},
-            status=400,
-        )
+        token = _jwt_for_user(user)
+        return Response({"success": True, "token": token, "user": _user_dict(user)})
+
     except Exception as e:
         return Response({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
 

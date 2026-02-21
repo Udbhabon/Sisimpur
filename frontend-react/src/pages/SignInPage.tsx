@@ -1,7 +1,7 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { sendOtp, verifyOtp, login, signup } from "@/lib/api";
+import { login as apiLogin, signup as apiSignup, sendOtp, verifyOtp } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/ui/ToastProvider";
 
@@ -52,7 +52,7 @@ export default function SignInPage() {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [otp, setOtp] = useState("");
 
-  const { refresh } = useAuth();
+  const { login: storeAuth } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -65,6 +65,7 @@ export default function SignInPage() {
     setPasswordConfirm("");
   }
 
+  /** Send OTP to email — Django calls Supabase Admin to generate + mail it */
   async function handleSendOtp() {
     if (!email) return toast("Enter your email first", "error");
     setLoading(true);
@@ -80,6 +81,7 @@ export default function SignInPage() {
     }
   }
 
+  /** Verify OTP with Django */
   async function handleVerifyOtp() {
     if (!otp) return toast("Enter the OTP", "error");
     setLoading(true);
@@ -95,12 +97,16 @@ export default function SignInPage() {
     }
   }
 
+  /**
+   * Sign in via Django → Supabase Admin SDK → MongoDB metadata stored.
+   * Django returns a Supabase JWT + user profile; we store it in localStorage.
+   */
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(email, password);
-      await refresh();
+      const { token, user } = await apiLogin(email, password);
+      storeAuth(token, user);
       navigate("/dashboard");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Login failed";
@@ -110,14 +116,18 @@ export default function SignInPage() {
     }
   }
 
+  /**
+   * Sign up via Django → Supabase Admin SDK creates user → metadata stored in MongoDB.
+   * Django returns a Supabase JWT + user profile.
+   */
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     if (otpStep !== "verified") return toast("Verify your email first", "error");
     if (password !== passwordConfirm) return toast("Passwords do not match", "error");
     setLoading(true);
     try {
-      await signup(email, password, passwordConfirm);
-      await refresh();
+      const { token, user } = await apiSignup(email, password, passwordConfirm);
+      storeAuth(token, user);
       navigate("/dashboard");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Signup failed";

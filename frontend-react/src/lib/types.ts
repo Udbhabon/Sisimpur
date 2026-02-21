@@ -3,7 +3,7 @@
 // ============================================================
 
 export interface User {
-  id: number;
+  id: string | number; // string UUID from Supabase, number from legacy Django auth
   username: string;
   email: string;
   first_name: string;
@@ -231,6 +231,14 @@ export interface LeaderboardResponse {
 export interface OtpResponse {
   success: boolean;
   message: string;
+}
+
+/** Returned by Django /api/auth/login/ and /api/auth/signup/ */
+export interface AuthTokenResponse {
+  success: boolean;
+  message?: string;
+  token: string;       // Supabase JWT issued by Django backend
+  user: User;
 }
 
 export interface SubmitExamResponse {

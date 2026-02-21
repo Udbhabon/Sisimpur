@@ -1,12 +1,20 @@
 /**
  * Centralised API client for the Sisimpur Django backend.
- * All requests go through Vite dev server proxy (/api/* → Django) so
- * session cookies work on the same origin (localhost:3000).
+ * All requests go through Vite dev server proxy (/api/* → Django).
+ *
+ * Auth flow:
+ *   - Sign-in / sign-up / OTP → Django endpoints (/api/auth/*)
+ *   - Django calls Supabase Admin SDK + stores metadata to MongoDB
+ *   - Django returns a Supabase JWT → stored in localStorage as "sisimpur_jwt"
+ *   - Every subsequent request carries: Authorization: Bearer <token>
+ *   - Django verifies the JWT on each protected endpoint
  */
 
 import axios from "axios";
+import { getStoredToken } from "./auth-context";
 import type {
   OtpResponse,
+  AuthTokenResponse,
   MyQuizzesResponse,
   ProcessDocumentResponse,
   JobStatusResponse,
@@ -27,12 +35,13 @@ import type {
 // ----------------------------------------------------------------
 const api = axios.create({
   baseURL: "", // use relative URLs so Vite proxy handles forwarding
-  withCredentials: true, // send session + csrftoken cookies
+  withCredentials: true, // keep sending session + csrftoken cookies (Phase 1 compat)
   headers: { "Content-Type": "application/json" },
 });
 
-// Read csrftoken cookie and attach it as X-CSRFToken header
+// Attach CSRF token (Django) + JWT Bearer token on every request.
 api.interceptors.request.use((config) => {
+  // 1. CSRF cookie (still needed for Django CSRF middleware on non-GET requests)
   if (typeof document !== "undefined") {
     const csrfToken = document.cookie
       .split("; ")
@@ -42,6 +51,13 @@ api.interceptors.request.use((config) => {
       config.headers["X-CSRFToken"] = csrfToken;
     }
   }
+
+  // 2. JWT issued by Django (backed by Supabase) — stored in localStorage
+  const token = getStoredToken();
+  if (token) {
+    config.headers["Authorization"] = `Bearer ${token}`;
+  }
+
   return config;
 });
 
@@ -57,54 +73,54 @@ api.interceptors.response.use(
   }
 );
 
-// ----------------------------------------------------------------
-// CSRF initialisation
-// ----------------------------------------------------------------
-/** Hit any safe GET endpoint so Django sets the csrftoken cookie. */
-export async function initCsrf() {
-  try {
-    await api.get("/api/brain/jobs/");
-  } catch {
-    // Ignore errors – we just want the Set-Cookie header
-  }
-}
 
 // ----------------------------------------------------------------
-// Auth
+// Auth  (all calls go to Django; Django talks to Supabase + MongoDB)
 // ----------------------------------------------------------------
+
+/** Send a one-time password to the given email address (signup flow). */
 export async function sendOtp(email: string): Promise<OtpResponse> {
   const { data } = await api.post<OtpResponse>("/api/auth/send-otp/", { email });
   if (!data.success) throw new Error(data.message);
   return data;
 }
 
+/** Verify the OTP received by email. */
 export async function verifyOtp(email: string, otp_code: string): Promise<OtpResponse> {
   const { data } = await api.post<OtpResponse>("/api/auth/verify-otp/", { email, otp_code });
   if (!data.success) throw new Error(data.message);
   return data;
 }
 
-export async function login(email: string, password: string): Promise<OtpResponse> {
-  const { data } = await api.post<OtpResponse>("/api/auth/login/", {
-    email,
-    password,
-  });
+/**
+ * Sign in with email + password.
+ * Returns a Supabase JWT issued by Django and the user profile.
+ */
+export async function login(email: string, password: string): Promise<AuthTokenResponse> {
+  const { data } = await api.post<AuthTokenResponse>("/api/auth/login/", { email, password });
+  if (!data.success) throw new Error(data.message ?? "Login failed");
   return data;
 }
 
+/**
+ * Create a new account.
+ * Returns a Supabase JWT issued by Django and the new user profile.
+ */
 export async function signup(
   email: string,
   password: string,
   password_confirm: string
-): Promise<OtpResponse> {
-  const { data } = await api.post<OtpResponse>("/api/auth/signup/", {
+): Promise<AuthTokenResponse> {
+  const { data } = await api.post<AuthTokenResponse>("/api/auth/signup/", {
     email,
     password,
     password_confirm,
   });
+  if (!data.success) throw new Error(data.message ?? "Signup failed");
   return data;
 }
 
+/** Sign out — Django invalidates the Supabase session server-side. */
 export async function logout(): Promise<void> {
   await api.post("/api/auth/logout/");
 }

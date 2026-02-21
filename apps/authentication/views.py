@@ -901,14 +901,11 @@ def handle_otp_resend(request, user, email):
 
 @csrf_exempt
 def send_otp_ajax(request):
-    """AJAX endpoint to send OTP"""
+    """Send OTP via Supabase email (replaces legacy SMTP flow)."""
     import logging
     logger = logging.getLogger(__name__)
 
-    logger.info(f"OTP AJAX request received - Method: {request.method}")
-
     if request.method != 'POST':
-        logger.warning("Invalid method for OTP request")
         return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
     try:
@@ -917,84 +914,36 @@ def send_otp_ajax(request):
 
         logger.info(f"OTP request for email: {email}")
 
-        # Get client IP address
-        def get_client_ip(request):
-            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-            if x_forwarded_for:
-                ip = x_forwarded_for.split(',')[0]
-            else:
-                ip = request.META.get('REMOTE_ADDR')
-            return ip
+        if not email:
+            return JsonResponse({'success': False, 'message': 'Email is required.'})
 
-        client_ip = get_client_ip(request)
-        logger.info(f"Request from IP: {client_ip}")
-
-        # Validate email
-        if not email or not (email.endswith('@gmail.com') or email.endswith('@googlemail.com')):
-            logger.warning(f"Invalid email format: {email}")
-            return JsonResponse({'success': False, 'message': 'Only Gmail addresses (@gmail.com or @googlemail.com) are allowed'})
-
-        # Check rate limiting
-        from .models import OTPRateLimit
-        rate_limit_ok, rate_limit_message = OTPRateLimit.check_rate_limit(email, client_ip)
-        if not rate_limit_ok:
-            logger.warning(f"Rate limit exceeded for {email} from {client_ip}")
-            return JsonResponse({'success': False, 'message': rate_limit_message})
-
-        # Check if email already exists
+        # Check if already registered
         if User.objects.filter(email=email).exists():
-            logger.warning(f"Email already exists: {email}")
             return JsonResponse({'success': False, 'message': 'Email already registered. Please try logging in.'})
 
-        # Create temporary user for OTP
-        username = email.split('@')[0]
-        original_username = username
-        counter = 1
-        while User.objects.filter(username=username).exists():
-            username = f"{original_username}{counter}"
-            counter += 1
+        # Delegate email sending to Supabase
+        from .supabase_service import send_otp as supabase_send_otp
+        ok, error_msg = supabase_send_otp(email)
 
-        logger.info(f"Creating user with username: {username}")
-
-        # Create inactive user
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password='temp_password',  # Will be updated after OTP verification
-            is_active=False
-        )
-
-        logger.info(f"User created successfully: {user.id}")
-
-        # Generate and send OTP
-        from .models import EmailOTP
-        from .email_service import EmailService
-
-        otp = EmailOTP.generate_otp(user, email, client_ip)
-        logger.info(f"OTP generated and hashed securely")
-
-        # Use the temporary plain OTP for email sending
-        email_sent = EmailService.send_otp_email(user, email, otp._plain_otp)
-        logger.info(f"Email sent result: {email_sent}")
-
-        if email_sent:
-            # Store user ID in session
-            request.session['pending_user_id'] = user.id
+        if ok:
             request.session['pending_email'] = email
-            logger.info(f"Session data stored for user: {user.id}")
-            return JsonResponse({'success': True, 'message': 'Verification code sent successfully'})
+            logger.info(f"OTP sent via Supabase to {email}")
+            return JsonResponse({'success': True, 'message': 'Verification code sent to your email.'})
         else:
-            logger.error("Failed to send email, deleting user")
-            user.delete()
-            return JsonResponse({'success': False, 'message': 'Failed to send verification code'})
+            logger.error(f"Supabase OTP failed: {error_msg}")
+            return JsonResponse({'success': False, 'message': 'Failed to send verification code. Please try again.'})
 
     except Exception as e:
-        logger.error(f"Exception in send_otp_ajax: {str(e)}", exc_info=True)
+        logger.error(f"Exception in send_otp_ajax: {e}", exc_info=True)
         return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+
 
 @csrf_exempt
 def verify_otp_ajax(request):
-    """AJAX endpoint to verify OTP"""
+    """Verify OTP token via Supabase and store verified state in session."""
+    import logging
+    logger = logging.getLogger(__name__)
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Method not allowed'})
 
@@ -1003,45 +952,22 @@ def verify_otp_ajax(request):
         email = data.get('email', '').strip()
         otp_code = data.get('otp_code', '').strip()
 
-        # Get pending user from session
-        pending_user_id = request.session.get('pending_user_id')
-        if not pending_user_id:
-            return JsonResponse({'success': False, 'message': 'No pending verification found'})
+        pending_email = request.session.get('pending_email')
+        if not pending_email or pending_email != email:
+            return JsonResponse({'success': False, 'message': 'No pending verification found. Please request a new code.'})
 
-        try:
-            user = User.objects.get(id=pending_user_id, email=email, is_active=False)
-        except User.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Invalid verification session'})
+        # Verify against Supabase
+        from .supabase_service import verify_otp as supabase_verify_otp
+        ok, session_data, error_msg = supabase_verify_otp(email, otp_code)
 
-        # Verify OTP
-        from .models import EmailOTP
-        try:
-            otp = EmailOTP.objects.filter(
-                user=user,
-                email=email,
-                is_verified=False
-            ).latest('created_at')
-
-            if otp.verify(otp_code):
-                # Activate the user but keep session data for final signup step
-                user.is_active = True
-                user.save()
-
-                # DON'T clear session data here - keep it for final signup step
-                # Session data will be cleared in handle_signup after password is set
-
-                return JsonResponse({'success': True, 'message': 'Email verified successfully'})
-            else:
-                if otp.is_expired():
-                    return JsonResponse({'success': False, 'message': 'Verification code has expired'})
-                elif otp.attempts >= 3:
-                    return JsonResponse({'success': False, 'message': 'Too many failed attempts'})
-                else:
-                    remaining = 3 - otp.attempts
-                    return JsonResponse({'success': False, 'message': f'Invalid code. {remaining} attempts remaining'})
-
-        except EmailOTP.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'No verification code found'})
+        if ok:
+            # Store verified email; keep pending_email so signup step can confirm it
+            request.session['otp_verified'] = True
+            logger.info(f"OTP verified for {email}")
+            return JsonResponse({'success': True, 'message': 'Email verified successfully.'})
+        else:
+            return JsonResponse({'success': False, 'message': error_msg or 'Invalid or expired verification code.'})
 
     except Exception as e:
+        logger.error(f"Exception in verify_otp_ajax: {e}", exc_info=True)
         return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})

@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { logout } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/ui/ToastProvider";
 import { cn } from "@/lib/utils";
@@ -10,15 +9,14 @@ interface NavbarProps {
 }
 
 export default function Navbar({ onMenuToggle }: NavbarProps) {
-  const { user, clearAuth } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
 
   async function handleLogout() {
     try {
-      await logout();
-      clearAuth();
+      await signOut();
       navigate("/signin");
     } catch {
       toast("Logout failed", "error");

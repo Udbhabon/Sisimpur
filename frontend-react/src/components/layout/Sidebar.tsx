@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/give-exam", label: "Give Exam", icon: "edit_document" },
   { href: "/my-quizzes", label: "My Quizzes", icon: "inventory_2" },
   { href: "/leaderboard", label: "Leaderboard", icon: "leaderboard" },
+  { href: "/analytics", label: "Analytics", icon: "bar_chart" },
 ];
 
 interface SidebarProps {

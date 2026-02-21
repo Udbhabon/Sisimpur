@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { Link } from "react-router-dom";
-import { processDocument, getJobStatus } from "@/lib/api";
+import { processDocument, getJobStatus, getMyQuizzes } from "@/lib/api";
 import { useToast } from "@/components/ui/ToastProvider";
 import { cn } from "@/lib/utils";
+import type { ProcessingJob } from "@/lib/types";
 
 interface JobState {
   id: number;
@@ -31,8 +32,37 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [job, setJob] = useState<JobState | null>(null);
   const [polling, setPolling] = useState(false);
+  const [recentJobs, setRecentJobs] = useState<ProcessingJob[]>([]);
+  const [progress, setProgress] = useState(0);
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { toast } = useToast();
+
+  // Load recent quizzes on mount
+  useEffect(() => {
+    getMyQuizzes()
+      .then((res) => setRecentJobs((res.jobs ?? []).slice(0, 5)))
+      .catch((err) => console.error("Failed to load recent quizzes:", err));
+  }, []);
+
+  // Simulate progress percentage for pending/processing jobs
+  useEffect(() => {
+    if (progressRef.current) clearInterval(progressRef.current);
+    const status = job?.status;
+    if (job && ["pending", "processing"].includes(status ?? "")) {
+      setProgress(5);
+      progressRef.current = setInterval(() => {
+        setProgress((p) => (p < 90 ? p + Math.random() * 4 : p));
+      }, 800);
+    } else if (status === "completed") {
+      setProgress(100);
+    } else {
+      setProgress(0);
+    }
+    return () => {
+      if (progressRef.current) clearInterval(progressRef.current);
+    };
+  }, [job]); // eslint-disable-line
 
   // Drop zone
   const onDrop = useCallback((accepted: File[]) => {
@@ -95,6 +125,15 @@ export default function DashboardPage() {
       setLoading(false);
     }
   }
+
+  // When job completes, refresh recent quizzes list
+  useEffect(() => {
+    if (job?.status === "completed") {
+      getMyQuizzes()
+        .then((res) => setRecentJobs((res.jobs ?? []).slice(0, 5)))
+        .catch((err) => console.error("Failed to refresh quiz list:", err));
+    }
+  }, [job]);
 
   const statusColor: Record<string, string> = {
     pending: "text-yellow-400",
@@ -299,17 +338,26 @@ export default function DashboardPage() {
       </button>
 
       {/* Quiz Status */}
-      {job && (
+      {(job || recentJobs.length > 0) && (
         <div className="glass border border-white/10 rounded-2xl p-6 space-y-4 fade-in">
           <h3 className="text-sm font-semibold text-white/70">Quiz Status</h3>
 
-          {/* Processing item */}
-          {["pending", "processing"].includes(job.status) && (
+          {/* Currently submitted job – processing */}
+          {job && ["pending", "processing"].includes(job.status) && (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04]">
               <span className="material-icons text-purple-400 text-2xl">picture_as_pdf</span>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-medium text-white truncate">{job.original_filename}</h4>
-                <p className="text-xs text-white/40">Processing…</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1 h-1 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-700"
+                      style={{ width: `${Math.round(progress)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-white/50 shrink-0">{Math.round(progress)}%</span>
+                </div>
+                <p className="text-xs text-white/40 mt-0.5">Processing…</p>
               </div>
               <span className={cn("text-xs font-semibold capitalize", statusColor[job.status] ?? "text-white/50")}>
                 <i className="ri-loader-4-line animate-spin" /> {job.status}
@@ -317,8 +365,8 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Completed item */}
-          {job.status === "completed" && (
+          {/* Currently submitted job – completed */}
+          {job && job.status === "completed" && (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04]">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
@@ -331,7 +379,7 @@ export default function DashboardPage() {
                 )}
                 <p className="text-xs text-white/30 mt-0.5 flex items-center gap-1">
                   <span className="px-1 py-0.5 rounded bg-purple-600/30 text-purple-300 text-[10px] font-bold">AI</span>
-                  AI Generated Quiz
+                  Generated from &quot;{job.original_filename}&quot;
                 </p>
               </div>
               <Link
@@ -345,8 +393,8 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Failed */}
-          {job.status === "failed" && (
+          {/* Currently submitted job – failed */}
+          {job && job.status === "failed" && (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
               <span className="material-icons text-red-400">error</span>
               <div className="flex-1 min-w-0">
@@ -355,6 +403,40 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+
+          {/* Recent completed quizzes from API */}
+          {recentJobs
+            .filter((j) => !job || j.id !== job.id)
+            .filter((j) => j.status === "completed")
+            .slice(0, 2)
+            .map((j) => (
+              <div key={j.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04]">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-xs font-semibold text-green-400">Ready</span>
+                    <span className="text-xs text-white/30">
+                      {j.completed_at ? new Date(j.completed_at).toLocaleDateString() : ""}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-medium text-white truncate">{j.original_filename}</h4>
+                  <p className="text-xs text-white/40">
+                    {j.num_questions} Questions · {j.question_type === "MULTIPLECHOICE" ? "MCQ" : "Short Ans"}
+                  </p>
+                  <p className="text-xs text-white/30 mt-0.5 flex items-center gap-1">
+                    <span className="px-1 py-0.5 rounded bg-purple-600/30 text-purple-300 text-[10px] font-bold">AI</span>
+                    Generated from &quot;{j.original_filename}&quot;
+                  </p>
+                </div>
+                <Link
+                  to="/my-quizzes"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium
+                    bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 transition whitespace-nowrap"
+                >
+                  Start Exam
+                  <span className="material-icons text-base">arrow_forward</span>
+                </Link>
+              </div>
+            ))}
         </div>
       )}
 
@@ -381,7 +463,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h5 className="text-sm font-medium text-white/80 truncate">{item.title}</h5>
-                <p className="text-xs text-white/40">{item.date} · {item.questions} Qs</p>
+                <p className="text-xs text-white/40">{item.date} • {item.questions} Qs</p>
               </div>
               <span className="material-icons text-white/20 group-hover:text-white/50 transition text-base">chevron_right</span>
             </div>

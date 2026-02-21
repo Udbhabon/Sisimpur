@@ -17,11 +17,17 @@ const AuthContext = createContext<AuthContextValue>({
   clearAuth: () => {},
 });
 
+// DEV ONLY: set to true to bypass backend auth — revert before production
+const DEV_BYPASS_AUTH = true;
+const DEV_MOCK_USER: User = { id: 0, username: "dev_user", email: "dev@localhost", first_name: "Dev", last_name: "User", full_name: "Dev User" };
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(DEV_BYPASS_AUTH ? DEV_MOCK_USER : null);
+  const [isLoading, setIsLoading] = useState(!DEV_BYPASS_AUTH);
 
   const fetchCurrentUser = useCallback(async () => {
+    // DEV ONLY: skip API call when bypass is active
+    if (DEV_BYPASS_AUTH) return;
     try {
       const res = await fetch("/api/auth/me/", {
         credentials: "include",
